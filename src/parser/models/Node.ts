@@ -22,6 +22,8 @@ export class Node{
         Node.count ++;
     }
 
+    public toString = ():string => this.name;
+
     //#region GETTERS AND SETTERS **********************************************************
     public setPosition(row:number, col:number){
         this._row = row;
@@ -45,7 +47,10 @@ export class Node{
 
     public get childs() { return this._childs; }
     public get sizeChilds() { return this._childs.length; }
+    //#endregion
 
+    //#region VERIFY TYPES ******************************************************************
+    public isIdentifier():boolean { return this._type === NodeType.IDENTIFICADOR; }
     //#endregion
     
     public printPosition():string{
@@ -91,7 +96,7 @@ export class Node{
         if(node.type === NodeType.ERROR) return ["",""];
         let nodoTxt:string = '', linkTxt:string = '';
         let idNode = node.id;
-        nodoTxt += `n${idNode} [label=\\"${node.name}\\"];\n`;
+        nodoTxt += `n${idNode} [label="${node.name}"];\n`;
         let size = node.childs.length;
         if(size > 0){
             let returned:string[];

@@ -6,7 +6,7 @@
     const { AnalysisError, ErrorType } = require('./models/Error');
     const { Null, Number, String, Bool, Identifier } = require('./expressions/Primitive');
     const { BinaryOperation } = require('./expressions/Operation');
-    const { CallFunction } = require('./structures/Structure');
+    const { CallFunction, Declaration } = require('./instructions/Sentence');
     let nodo_inicio = new Node('START');
     let errorList = [];
     nodo_inicio.id = 0; 
@@ -195,14 +195,14 @@ FIN
 ;
 
 PRIMITIVO 
-  : 'string'          { $$ = new Node('string', NodeType.DATA_TYPE); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'boolean'         { $$ = new Node('boolean', NodeType.DATA_TYPE); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'number'          { $$ = new Node('number', NodeType.DATA_TYPE); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'identificador'   { $$ = new Node($1, NodeType.DATA_TYPE); $$.setPosition(this._$.first_line, this._$.first_column);}
+  : 'string'          { $$ = new Node('string', NodeType.DT_STRING); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | 'boolean'         { $$ = new Node('boolean', NodeType.DT_BOOLEAN); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | 'number'          { $$ = new Node('number', NodeType.DT_NUMBER); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | 'identificador'   { $$ = new Node($1, NodeType.DT_IDENTIFIER); $$.setPosition(this._$.first_line, this._$.first_column);}
 ;
 
 DATO 
-  : PRIMITIVO CORCHETES                  { $2.setName($1.getName()); $$ = $2;}
+  : PRIMITIVO CORCHETES                  { $2.name = $1.name; $$ = $2;}
   | 'Array' '<' DATO '>'                 { $$ = new Node($1, NodeType.DATA_TYPE);
                                            $$.addChild($3);
                                          }
@@ -266,28 +266,15 @@ BODY
 /* ------  REGLAS PARA VARIABLES ------------------------------------------------------------------ */
 /* ---------------- Declaracion de variables y asignacion  --------- */
 DECLARACION
-  : 'let' 'identificador' TIPO_DATO '=' EXPRESION  OTRA_DECLARACION       { $$ = new Node('=', NodeType.INS_DEC_ASIGN);
-                                                                            $$.addChild(new Node($1, NodeType.VARIABLE));
-                                                                            $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                                            $$.childs[1].setPosition(this._$.first_line, this._$.first_column+4);
-                                                                            $$.addChild($3);                                                                             
-                                                                            $$.addChild($5);
-                                                                            $$.addChild($6);                                                                          
+  : 'let' 'identificador' TIPO_DATO '=' EXPRESION  OTRA_DECLARACION       { $$ = new Declaration($2, $5, $3);
+                                                                            $$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                                                                                                                 
                                                                           }
-  | 'let' 'identificador' TIPO_DATO OTRA_DECLARACION                      { $$ = new Node('Declaracion', NodeType.INS_DECLARACION);
-                                                                            $$.addChild(new Node($1, NodeType.VARIABLE));
-                                                                            $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                                            $$.childs[1].setPosition(this._$.first_line, this._$.first_column+4);
-                                                                            $$.addChild($3);
-                                                                            $$.addChild($4);
+  | 'let' 'identificador' TIPO_DATO OTRA_DECLARACION                      { $$ = new Declaration($2, null, $3);
+                                                                            $$.setPosition(this._$.first_line, this._$.first_column+4);
                                                                           }
-  | 'const' 'identificador' TIPO_DATO '=' EXPRESION  ASIGNACION_CONSTANTE { $$ = new Node('=', NodeType.INS_DEC_ASIGN);
-                                                                            $$.addChild(new Node($1, NodeType.CONSTANTE));
-                                                                            $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                                            $$.childs[1].setPosition(this._$.first_line, this._$.first_column+6);
-                                                                            $$.addChild($3);
-                                                                            $$.addChild($5);  
-                                                                            $$.addChild($6);                                                                        
+  | 'const' 'identificador' TIPO_DATO '=' EXPRESION  ASIGNACION_CONSTANTE { $$ = new Declaration($2, $5, $3, true);
+                                                                            $$.setPosition(this._$.first_line, this._$.first_column+6);
                                                                           }
 ;
 

@@ -15,8 +15,6 @@ export class BinaryOperation extends Node implements IRunner{
         this.addChild(exp2);
     }
 
-    public toString = ():string => this.name;
-
     public run (st: SymbolTable):Value{
         // Obteniendo expresiones
         let exp1:IRunner = this.childs[0];

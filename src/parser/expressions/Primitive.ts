@@ -24,8 +24,6 @@ export class Number extends Node implements IRunner{
         super(number, NodeType.NUMBER);
     }
 
-    public toString = ():string => this.name;
-
     public run (st: SymbolTable):Value{
         return new Value(+this.name, this.row, this.col, DataType.NUMBER);
     }
@@ -36,8 +34,6 @@ export class String extends Node implements IRunner{
     constructor(stringData:string){
         super(stringData, NodeType.STRING);
     }
-
-    public toString = ():string => this.name;
 
     public run (st: SymbolTable):Value{
         return new Value(this.name, this.row, this.col, DataType.NUMBER);
@@ -50,8 +46,6 @@ export class Bool extends Node implements IRunner{
         super(booleano, NodeType.BOOLEAN);
     }
 
-    public toString = ():string => this.name;
-
     public run (st: SymbolTable):Value{
         return new Value(this.name==='true', this.row, this.col, DataType.BOOL);
     }
@@ -63,10 +57,10 @@ export class Identifier extends Node implements IRunner{
         super(identifier, NodeType.IDENTIFICADOR);
     }
 
-    public toString = ():string => this.name;
-
     public run (st: SymbolTable):Value{
-        return st.search(this.name);
+        const finded:Value|null = st.find(this.name);
+        if(!finded) return new Value('');
+        return finded;
     }
 }
 

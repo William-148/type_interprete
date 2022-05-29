@@ -74,6 +74,10 @@ export enum NodeType{
     UNDEFINED,//*
 
     //NEWS
-    OP_BINARY
+    OP_BINARY,
+    DT_STRING,
+    DT_BOOLEAN,
+    DT_NUMBER,
+    DT_IDENTIFIER
 
 }

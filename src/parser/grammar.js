@@ -119,19 +119,19 @@ case 18:
 this.$ = new Node(';');
 break;
 case 19:
- this.$ = new Node('string', NodeType.DATA_TYPE); this.$.setPosition(this._$.first_line, this._$.first_column);
+ this.$ = new Node('string', NodeType.DT_STRING); this.$.setPosition(this._$.first_line, this._$.first_column);
 break;
 case 20:
- this.$ = new Node('boolean', NodeType.DATA_TYPE); this.$.setPosition(this._$.first_line, this._$.first_column);
+ this.$ = new Node('boolean', NodeType.DT_BOOLEAN); this.$.setPosition(this._$.first_line, this._$.first_column);
 break;
 case 21:
- this.$ = new Node('number', NodeType.DATA_TYPE); this.$.setPosition(this._$.first_line, this._$.first_column);
+ this.$ = new Node('number', NodeType.DT_NUMBER); this.$.setPosition(this._$.first_line, this._$.first_column);
 break;
 case 22:
- this.$ = new Node($$[$0], NodeType.DATA_TYPE); this.$.setPosition(this._$.first_line, this._$.first_column);
+ this.$ = new Node($$[$0], NodeType.DT_IDENTIFIER); this.$.setPosition(this._$.first_line, this._$.first_column);
 break;
 case 23:
- $$[$0].setName($$[$0-1].getName()); this.$ = $$[$0];
+ $$[$0].name = $$[$0-1].name; this.$ = $$[$0];
 break;
 case 24:
  this.$ = new Node($$[$0-3], NodeType.DATA_TYPE);
@@ -189,32 +189,19 @@ case 36:
  this.$ = new Node('Cuerpo');
 break;
 case 37:
- this.$ = new Node('=', NodeType.INS_DEC_ASIGN);
-                                                                            this.$.addChild(new Node($$[$0-5], NodeType.VARIABLE));
-                                                                            this.$.addChild(new Node($$[$0-4], NodeType.IDENTIFICADOR));
-                                                                            this.$.childs[1].setPosition(this._$.first_line, this._$.first_column+4);
-                                                                            this.$.addChild($$[$0-3]);                                                                             
-                                                                            this.$.addChild($$[$0-1]);
-                                                                            this.$.addChild($$[$0]);                                                                          
+ this.$ = new Declaration($$[$0-4], $$[$0-1], $$[$0-3]);
+                                                                            this.$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                                                                                                                 
                                                                           
 break;
 case 38:
- this.$ = new Node('Declaracion', NodeType.INS_DECLARACION);
-                                                                            this.$.addChild(new Node($$[$0-3], NodeType.VARIABLE));
-                                                                            this.$.addChild(new Node($$[$0-2], NodeType.IDENTIFICADOR));
-                                                                            this.$.childs[1].setPosition(this._$.first_line, this._$.first_column+4);
-                                                                            this.$.addChild($$[$0-1]);
-                                                                            this.$.addChild($$[$0]);
+ this.$ = new Declaration($$[$0-2], null, $$[$0-1]);
+                                                                            this.$.setPosition(this._$.first_line, this._$.first_column+4);
                                                                           
 break;
 case 39:
- this.$ = new Node('=', NodeType.INS_DEC_ASIGN);
-                                                                            this.$.addChild(new Node($$[$0-5], NodeType.CONSTANTE));
-                                                                            this.$.addChild(new Node($$[$0-4], NodeType.IDENTIFICADOR));
-                                                                            this.$.childs[1].setPosition(this._$.first_line, this._$.first_column+6);
-                                                                            this.$.addChild($$[$0-3]);
-                                                                            this.$.addChild($$[$0-1]);  
-                                                                            this.$.addChild($$[$0]);                                                                        
+ this.$ = new Declaration($$[$0-4], $$[$0-1], $$[$0-3], true);
+                                                                            this.$.setPosition(this._$.first_line, this._$.first_column+6);
                                                                           
 break;
 case 40:
@@ -836,7 +823,7 @@ _handle_error:
     const { AnalysisError, ErrorType } = require('./models/Error');
     const { Null, Number, String, Bool, Identifier } = require('./expressions/Primitive');
     const { BinaryOperation } = require('./expressions/Operation');
-    const { CallFunction } = require('./structures/Structure');
+    const { CallFunction, Declaration } = require('./instructions/Sentence');
     let nodo_inicio = new Node('START');
     let errorList = [];
     nodo_inicio.id = 0; 

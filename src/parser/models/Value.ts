@@ -3,8 +3,8 @@ import { AnalysisError, ErrorType } from "./Error";
 
 export class Value {
 
-    private _type:DataType;
-    private _value:any;
+    protected _type:DataType;
+    protected _value:any;
     private _row:number;
     private _col:number;
 

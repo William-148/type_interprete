@@ -2,18 +2,42 @@ import React from 'react';
 import logo from './logo.svg';
 import TextEditor from './components/TextEditor';
 import { run } from './parser/Interpreter'
-
 import './App.css';
 import { useState } from 'react';
 
+const code =`// Ponderación
+const laboratorio:number = 35;
+const tareas:number = 5;
+const parcial1:number = 20;
+const parcial2:number = 15;
+const final:number = 25;
+const ponderacion:number = laboratorio + tareas + parcial1 + parcial2 + final;
+
+// Nombre estudiante
+let name:string = "Khenneth Moreno";
+const nota_lab:number = 70;
+const nota_tareas:number = 100;
+const nota_p1:number = 43;
+const nota_p2:number = 60;
+const nota_final:number = 55;
+const Total:number = (
+  laboratorio*nota_lab +
+  tareas*nota_tareas +
+  parcial1*nota_p1 +
+  parcial2*nota_p2 +
+  final*nota_final
+) / 100;
+console.log(name," tiene una nota final de: '",Total, "' sobre '", ponderacion, "'");`
+
 function App() {
-    const [text, setText] = useState("//Only print and numeric operations are available\nconsole.log('hello world!');\nconsole.log(3+(3**(1+1))+1);\nconsole.log(true);")
+    const [text, setText] = useState(code)
     const [logs, setLogs] = useState("> Console [V:1.0]");
 
     const execute = (text:string) => {
         const result = run(text);
         if(!!result){
             setLogs(logs+ "\n[Running -----] \n" +result?.logs);
+            console.log(result.dot)
         }
     }
 
@@ -32,6 +56,7 @@ function App() {
                             setText(value);
                         }}
                     />
+                    <hr />
                     <TextEditor
                         value={logs}
                         extensions={[]}
