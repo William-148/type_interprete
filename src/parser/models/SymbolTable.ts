@@ -82,7 +82,10 @@ export class SymbolTable {
         // Si el simbolo existe, se actualiza
         const isUpdated = this.currentUpdate(symbol);
         // Si el simbolo no existe, se agrega el nuevo simbolo
-        if(!isUpdated) this._symbols[id] = symbol;
+        if(!isUpdated) throw new AnalysisError(
+            `"${id}" no ha sido declarada.`,
+            ErrorType.SEMANTICO, row, col
+        );
     }
 
     /**
@@ -94,14 +97,14 @@ export class SymbolTable {
         // Verificar el tipo de dato
         if(!symbol.isAssignable(value)) throw new AnalysisError(
             `"${value.typeToStr()}" no es asignable a "${symbol.typeToStr()}".`,
-            ErrorType.SEMANTICO, symbol.row, symbol.col
+            ErrorType.SEMANTICO, value.row, value.col
         );
 
         // Buscando simbolo en entorno actual
         const finded = this._symbols[symbol.id];
         if(!!finded) throw new AnalysisError(
             `"${symbol.id}" ya ha sido declarado en el entorno actual.`,
-            ErrorType.SEMANTICO, symbol.row, symbol.col
+            ErrorType.SEMANTICO, value.row, value.col
         );
         // Agregamos el simbolo
         symbol.setValue(value.value, value.type);

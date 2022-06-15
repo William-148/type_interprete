@@ -32,7 +32,7 @@ export class Symbol extends Value {
      * @returns boolean
      */
     public isAssignable(value:Value):boolean{
-        return this.isUndefined() || this.isAny() || this.type === value.type;
+        return this.isUndefined() || this.isAny() || this._type === value.type;
     }
 }
 

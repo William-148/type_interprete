@@ -36,7 +36,7 @@ export class String extends Node implements IRunner{
     }
 
     public run (st: SymbolTable):Value{
-        return new Value(this.name, this.row, this.col, DataType.NUMBER);
+        return new Value(this.name, this.row, this.col, DataType.STRING);
     }
 }
 

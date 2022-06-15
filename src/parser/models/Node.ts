@@ -6,11 +6,11 @@ export class Node{
 
     //Campos de clase
     private _id:number;
-    private _name:string;
-    private _type:NodeType;
-    private _childs:Array<any>;
-    private _col:number;
-    private _row:number;
+    protected _name:string;
+    protected _type:NodeType;
+    protected _childs:Array<any>;
+    protected _col:number;
+    protected _row:number;
 
     constructor(name:string, type: NodeType = NodeType.UNDEFINED){
         this._id = Node.count;
@@ -51,6 +51,7 @@ export class Node{
 
     //#region VERIFY TYPES ******************************************************************
     public isIdentifier():boolean { return this._type === NodeType.IDENTIFICADOR; }
+    public isSentence():boolean { return this._type === NodeType.SENTENCE}
     //#endregion
     
     public printPosition():string{

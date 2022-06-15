@@ -5,6 +5,7 @@ import { SymbolTable } from './models/SymbolTable';
 
 export function run(input:string){
     //Ejecutar Parser
+    Node.count = 0; 
     const { tree, errors} = parse(input);
     if(!tree) return undefined;
     //Generando grafica del AST
