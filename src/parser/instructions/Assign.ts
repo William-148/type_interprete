@@ -3,6 +3,8 @@ import { Node } from "../models/Node";
 import { NodeType } from "../models/NodeType";
 import { Value } from "../models/Value";
 import { SymbolTable } from "../models/SymbolTable";
+import { Display } from "../models/Display";
+import { AnalysisError, ErrorType } from "../models/Error";
 
 
 /**
@@ -15,15 +17,33 @@ import { SymbolTable } from "../models/SymbolTable";
      * @param value Nodo que contiene el valor a ser asignado
      * @param dataType Tipo de dato que per
      */
-    constructor(variable:Node, value:Node, dataType:Node|null=null){
+    constructor(variable:Node, value:Node){
         super("Asignación", NodeType.INS_ASIGNACION);
         this.addChild(variable);
         this.addChild(value);
-        if(!!dataType) this.addChild(dataType);
     }
 
     public run(st: SymbolTable):Value{
-         return new Value('');
+        const variable:Node = this._childs[0];
+        const expression:IRunner = this._childs[1];
+        try{
+            const toAssing = expression.run(st);
+            if(variable.type === NodeType.IDENTIFICADOR){
+                st.update(variable.name, variable, toAssing);
+            }
+            else{
+                Display.error(
+                    new AnalysisError(
+                        'Solo se puede asignar valor a una variable, array o type',
+                        ErrorType.SEMANTICO,
+                        variable
+                    )
+                );
+            }
+        }catch(error){
+            Display.error(error);
+        }
+        return new Value('');
     }
 
 }

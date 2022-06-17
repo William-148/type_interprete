@@ -26,7 +26,7 @@ export class BinaryOperation extends Node implements IRunner{
 
         try{
             let result:Value = this.binaryOperation(val1, val2, this.name);
-            result.setPosition(this.row, this.col);
+            result.setPosition(this);
             return result;
         }catch(error){
             Display.error(error);
@@ -51,7 +51,7 @@ export class BinaryOperation extends Node implements IRunner{
         }
         throw new AnalysisError(
             `Operación "${operation}" no se puede realizar entre ${val1.typeToStr()}-${val2.typeToStr()}`,
-            ErrorType.SEMANTICO, this.row, this.col
+            ErrorType.SEMANTICO, this
         );
     }
 

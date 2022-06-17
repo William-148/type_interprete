@@ -1,3 +1,5 @@
+import { Position } from "./Position";
+
 export enum ErrorType{
     LEXICO,
     SINTACTICO,
@@ -5,14 +7,15 @@ export enum ErrorType{
 }
 
 export class AnalysisError extends Error{
-    private _row:number;
-    private _col:number;
+    private _position:Position;
 
-    constructor(message:string, tipo:ErrorType, row:number = -1, col:number = -1){
+    constructor(message:string, tipo:ErrorType, position:Position|null=null){
         super(message);
         this.setName(tipo);
-        this._row = row;
-        this._col = col;
+        this._position = new Position(-1,-1);
+        if(!!position){
+            this._position.setPosition(position);
+        }
         /*
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, AnalysisError);
@@ -20,15 +23,19 @@ export class AnalysisError extends Error{
         */
     }
 
-    public get row() { return this._row; }
-    public set row(row:number) { this._row = row; }
+    public get row() { return this._position.row; }
+    public set row(row:number) { this._position.row = row; }
 
-    public get col() { return this._col; }
-    public set col(col:number) { this._col = col; }
+    public get col() { return this._position.col; }
+    public set col(col:number) { this._position.col = col; }
 
     public setRowColumn(row:number, col:number):void{
-        this._row = row;
-        this._col = col;
+        this._position.row = row;
+        this._position.col = col;
+    }
+
+    public setPosition(position:Position):void{
+        this._position = position;
     }
 
     private setName(tipo:ErrorType):void{
@@ -45,7 +52,7 @@ export class AnalysisError extends Error{
         }
     }
 
-    public toString = ():string => (this._row === -1 && this._col === -1)?
+    public toString = ():string => (this._position.row === -1 && this._position.col === -1)?
         `${this.name}: ${this.message}`:
-        `${this.name}: ${this.message}  Fila:${this.row} Columna:${this.col}`;
+        `${this.name}: ${this.message}  ${this._position}`;
 }

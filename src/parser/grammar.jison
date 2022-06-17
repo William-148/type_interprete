@@ -10,6 +10,7 @@
     const { Sentence } = require('./instructions/Sentence');
     const { Declaration, DeclarationList } = require('./instructions/Declaration');
     const { CallFunction } = require('./instructions/CallFunction');
+    const { Assign } = require('./instructions/Assign');
     let nodo_inicio = new Node('START');
     let errorList = [];
     nodo_inicio.id = 0; 
@@ -197,8 +198,8 @@ SENTENCE
     | DO_WHILE                      { $$ = $1; }
     | CONSOLE                       { $$ = $1; }
     | RETURN                        { $$ = $1; }
-    | 'break' ';'                   { $$ = new Node($1, NodeType.INS_BREAK); $$.setPosition(this._$.first_line, this._$.first_column); }
-    | 'continue' ';'                { $$ = new Node($1, NodeType.INS_CONTINUE); $$.setPosition(this._$.first_line, this._$.first_column);}
+    | 'break' ';'                   { $$ = new Node($1, NodeType.INS_BREAK); $$.setRowCol(this._$.first_line, this._$.first_column); }
+    | 'continue' ';'                { $$ = new Node($1, NodeType.INS_CONTINUE); $$.setRowCol(this._$.first_line, this._$.first_column);}
     | error                         { errorList.push(new AnalysisError('Token "'+yytext+'" no esperado.', ErrorType.SINTACTICO, this._$.first_line, this._$.first_column));
                                       $$ = new Node('', NodeType.ERROR);
                                     }
@@ -207,10 +208,10 @@ SENTENCE
 /**************************************** TIPO DE DATOS ****************************************/
 
 PRIMITIVE 
-    : 'string'                      { $$ = new DefineType('string', NodeType.DT_STRING); $$.setPosition(this._$.first_line, this._$.first_column);}
-    | 'boolean'                     { $$ = new DefineType('boolean', NodeType.DT_BOOLEAN); $$.setPosition(this._$.first_line, this._$.first_column);}
-    | 'number'                      { $$ = new DefineType('number', NodeType.DT_NUMBER); $$.setPosition(this._$.first_line, this._$.first_column);}
-    | 'identificador'               { $$ = new DefineType($1, NodeType.DT_IDENTIFIER); $$.setPosition(this._$.first_line, this._$.first_column);}
+    : 'string'                      { $$ = new DefineType('string', NodeType.DT_STRING); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | 'boolean'                     { $$ = new DefineType('boolean', NodeType.DT_BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | 'number'                      { $$ = new DefineType('number', NodeType.DT_NUMBER); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | 'identificador'               { $$ = new DefineType($1, NodeType.DT_IDENTIFIER); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
 DATA_TYPE
@@ -229,7 +230,7 @@ BRACKET
 ;
 
 /***************************************** REGLAS PARA VARIABLES *****************************************/
-/* ---------------- Declaracion de variables y asignacion  --------- */
+/*--------------------- Declaracion de variables y asignacion ---------------------*/
 DECLARATION_LIST
     : DECLARATION_LIST ',' DECLARATION                  { $$ = $1; $$.addChild($3); }
     | DECLARATION                                       { $$ = new DeclarationList(); $$.addChild($1); }
@@ -237,17 +238,17 @@ DECLARATION_LIST
 
 DECLARATION
     : 'identificador' ':' DATA_TYPE '=' EXPRESION       { $$ = new Declaration($1, $5, $3);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+4);
                                                         }
     | 'identificador' '=' EXPRESION                     { $$ = new Declaration($1, $3, null);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+4);
                                                         }
     
     | 'identificador' ':' DATA_TYPE                     { $$ = new Declaration($1, null, $3);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+4);
                                                         }
     | 'identificador'                                   { $$ = new Declaration($1);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+4);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+4);
                                                         }
 ;
 
@@ -258,13 +259,24 @@ CONST_LIST
 
 CONST_DECLARATION
     : 'identificador' ':' DATA_TYPE '=' EXPRESION       { $$ = new Declaration($1, $5, $3, true);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+6);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+6);
                                                         }
     | 'identificador' '=' EXPRESION                     { $$ = new Declaration($1, $3, null, true);
-                                                          $$.setPosition(this._$.first_line, this._$.first_column+6);
+                                                          $$.setRowCol(this._$.first_line, this._$.first_column+6);
                                                         }
 ;
 
+/*---------------------------- Asignacion de variables ----------------------------*/
+ASSIGNMENT
+    : EXPRESION '=' EXPRESION ';'                       { $$ = new Assign($1, $3); }
+    | EXPRESION  ';'                                    {   if($1.type === NodeType.INS_LLAMADA_FUNCION){
+                                                                $$ = $1;
+                                                            }else{        
+                                                                $$ = new Node('Expresion', NodeType.INS_EXPRESION);
+                                                                $$.addChild($1);
+                                                            }
+                                                        }
+;
 
 /*********************** OLD **********************######################################################################################################################################*/
 DATO 
@@ -297,9 +309,9 @@ TIPO_RETORNO_
 /* ------  REGLAS PARA FUNCIONES ------------------------------------------------------------------ */
 FUNCION           
   : 'function' 'identificador' '(' PARAMETROS ')' TIPO_RETORNO '{' SENTENCES_LIST '}'   {$$ = new Node('Funcion', NodeType.INS_FUNCION);
-                                                                               $$.setPosition(this._$.first_line, this._$.first_column);
+                                                                               $$.setRowCol(this._$.first_line, this._$.first_column);
                                                                                $$.addChild(new Node($2));
-                                                                               $$.childs[0].setPosition(this._$.first_line, this._$.first_column+$1.length+1);
+                                                                               $$.childs[0].setRowCol(this._$.first_line, this._$.first_column+$1.length+1);
                                                                                $$.addChild($4);
                                                                                $$.addChild($6);
                                                                                $$.addChild($8);
@@ -310,13 +322,13 @@ FUNCION
 PARAMETROS
   : PARAMETROS ',' 'identificador' TIPO_DATO  { let aux = new Node('Parametro');
                                                 aux.addChild(new Node($3, NodeType.IDENTIFICADOR));                                                  
-                                                aux.childs[0].setPosition(this._$.first_line, this._$.first_column+3);
+                                                aux.childs[0].setRowCol(this._$.first_line, this._$.first_column+3);
                                                 aux.addChild($4);
                                                 $1.addChild(aux);
                                               }
   | PARAMETROS 'identificador' TIPO_DATO      { let aux1 = new Node('Parametro');
                                                 aux1.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                aux1.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                aux1.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                 aux1.addChild($3);
                                                 $1.addChild(aux1);
                                               }
@@ -329,27 +341,14 @@ PARAMETROS
 /* ------  REGLAS PARA VARIABLES ------------------------------------------------------------------ */
 
 
-/* ---------------- Asignacion de variables ------------------------  */
-ASSIGNMENT
-  : EXPRESION '=' EXPRESION ';'                                          { $$ = new Node('=', NodeType.INS_ASIGNACION);
-                                                                            $$.addChild($1);
-                                                                            $$.addChild($3);
-                                                                          }
-  | EXPRESION  ';'                                                         { if($1.type === NodeType.INS_LLAMADA_FUNCION){
-                                                                              $$ = $1;
-                                                                            }else{        
-                                                                              $$ = new Node('Expresion', NodeType.INS_EXPRESION);
-                                                                              $$.addChild($1);
-                                                                            }
-                                                                          }
-;
+
 
 /* ---------------- Llamada funcion ------------------------  */
 LLAMADA_FUNCION
   : 'identificador' '(' INGRESO_PARAMETROS ')'    { $$ = new Node('Llamada Funcion', NodeType.INS_LLAMADA_FUNCION);
-                                                    $$.setPosition(this._$.first_line, this._$.first_column);
+                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
                                                     $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                                    $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                     $$.addChild($3);
                                                   }
 ;
@@ -368,16 +367,16 @@ INGRESO_PARAMETROS_
 
 LLAMADA_ARRAY
   :  'identificador' POSICION_ARRAY               { $$ = new Node('Llamada Array', NodeType.INS_LLAMADA_ARRAY);
-                                                    $$.setPosition(this._$.first_line, this._$.first_column);
+                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
                                                     $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                                    $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                     $$.addChild($2);
                                                   }   
 ;
 
 POSICION_ARRAY
   : POSICION_ARRAY  '[' EXPRESION ']'             { $1.addChild($3); }
-  | '[' EXPRESION ']'                             { $$ = new Node('Posicion Array'); $$.addChild($2); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | '[' EXPRESION ']'                             { $$ = new Node('Posicion Array'); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
 /* ------  VALOR DE DATOS ------------------------------------------------------------------ */
@@ -387,14 +386,14 @@ EXPRESION
   : '(' EXPRESION ')'             { $$ = $2; }
 
   //OPERACIONES ARITMETICAS
-  | EXPRESION '+' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '-' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '*' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '/' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '**' EXPRESION      { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '%' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | '-' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.MINUS); $$.addChild($2); $$.setPosition(this._$.first_line, this._$.first_column);}    
-  | '+' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.PLUS); $$.addChild($2); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | EXPRESION '+' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '-' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '*' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '/' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '**' EXPRESION      { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '%' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | '-' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.MINUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}    
+  | '+' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.PLUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
 
   //RELACIONALES
   | EXPRESION '<' EXPRESION       { $$ = new Node($2, NodeType.MENOR_QUE); $$.addChild($1); $$.addChild($3); }
@@ -407,66 +406,66 @@ EXPRESION
   | '!' EXPRESION                 { $$ = new Node($1, NodeType.NOT); $$.addChild($2); }
 
   //OPERADOR LOGICO
-  | EXPRESION '||' EXPRESION      { $$ = new Node($2, NodeType.OR); $$.addChild($1); $$.addChild($3); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | EXPRESION '&&' EXPRESION      { $$ = new Node($2, NodeType.AND); $$.addChild($1); $$.addChild($3); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | EXPRESION '||' EXPRESION      { $$ = new Node($2, NodeType.OR); $$.addChild($1); $$.addChild($3); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | EXPRESION '&&' EXPRESION      { $$ = new Node($2, NodeType.AND); $$.addChild($1); $$.addChild($3); $$.setRowCol(this._$.first_line, this._$.first_column);}
 
   //INCREMENTO Y DECREMENTO
   | 'identificador' '+=' EXPRESION    { $$ = new Node($2, NodeType.INCREMENTO); 
                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                          
-                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);  
+                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);  
                                         $$.addChild($3); 
                                       }   
   | 'identificador' '-=' EXPRESION    { $$ = new Node($2, NodeType.DECREMENTO); 
                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                          
-                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                         $$.addChild($3); 
                                       }   
   | 'identificador' '++'              { $$ = new Node($2, NodeType.INCREMENTO_UNARIO); 
                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                          
-                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                       }   
   | 'identificador' '--'              { $$ = new Node($2, NodeType.DECREMENTO_UNARIO); 
                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                       }
   //OBTENER DATOS
   | EXPRESION '.' EXPRESION                 { $$ = new Node($2, NodeType.PROPIEDAD); 
                                               $$.addChild($1); 
                                               $$.addChild($3); 
-                                              $$.setPosition(this._$.first_line, this._$.first_column); }
+                                              $$.setRowCol(this._$.first_line, this._$.first_column); }
   | LLAMADA_FUNCION                         { $$ = $1; }
   | LLAMADA_ARRAY                           { $$ = $1; }
   | EXPRESION '?' EXPRESION ':' EXPRESION   { $$ = new Node('Operador\\nTernario', NodeType.INS_OP_TERNARIO); 
                                               $$.addChild($1); 
                                               $$.addChild($3); 
                                               $$.addChild($5); 
-                                              $$.setPosition(this._$.first_line, this._$.first_column); }
+                                              $$.setRowCol(this._$.first_line, this._$.first_column); }
   
   //DATOS COMPLEJOS
-  | '[' DATO_ARRAY']'                       { $$ = $2; $$.setPosition(this._$.first_line, this._$.first_column);}
-  | '{' DATO_TYPE '}'                       { $$ = $2; $$.setPosition(this._$.first_line, this._$.first_column);}
+  | '[' DATO_ARRAY']'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | '{' DATO_TYPE '}'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'new' 'Array' '(' EXPRESION ')'         { $$ = new Node('New Array', NodeType.INS_NEW_ARRAY); 
                                               $$.addChild($4);
-                                              $$.setPosition(this._$.first_line, this._$.first_column);}
+                                              $$.setRowCol(this._$.first_line, this._$.first_column);}
 
   //DATOS PRIMITIVOS                   
-  | 'numero'                      { $$ = new Number($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'decimal'                     { $$ = new Number($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'true'                        { $$ = new Bool('true'); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'false'                       { $$ = new Bool('false'); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_d'                    { $$ = new String($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_s'                    { $$ = new String($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_t'                    { $$ = new String($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'identificador'               { $$ = new Identifier($1); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'null'                        { $$ = new Null(); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'undefined'                   { $$ = new Null(); $$.setPosition(this._$.first_line, this._$.first_column);}
+  | 'numero'                      { $$ = new Number($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'decimal'                     { $$ = new Number($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'true'                        { $$ = new Bool('true'); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'false'                       { $$ = new Bool('false'); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_d'                    { $$ = new String($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_s'                    { $$ = new String($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_t'                    { $$ = new String($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'identificador'               { $$ = new Identifier($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'null'                        { $$ = new Null(); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'undefined'                   { $$ = new Null(); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
 // Asignar valor a atributos types ------------------------------------------------------------------------------
 DATO_TYPE
   : 'identificador' ':' EXPRESION OTRO_DATO_TYPE  { let info = new Node('Atributo');
                                                     info.addChild(new Node($1, NodeType.IDENTIFICADOR));                                                      
-                                                    info.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                    info.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                     info.addChild($3);
                                                     $4.addChild(info); $$=$4;
                                                   }
@@ -493,13 +492,13 @@ OTRO_VALOR
 
 //Tipo de datos para constantes
 CONSTANT
-  : 'numero'                              {$$ = new Node($1, NodeType.NUMBER); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_d'                            {$$ = new Node($1, NodeType.STRING); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_s'                            {$$ = new Node($1, NodeType.STRING); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'cadena_t'                            {$$ = new Node($1, NodeType.STRING); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'identificador'                       {$$ = new Node($1, NodeType.IDENTIFICADOR); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'true'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'false'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setPosition(this._$.first_line, this._$.first_column);}
+  : 'numero'                              {$$ = new Node($1, NodeType.NUMBER); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_d'                            {$$ = new Node($1, NodeType.STRING); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_s'                            {$$ = new Node($1, NodeType.STRING); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'cadena_t'                            {$$ = new Node($1, NodeType.STRING); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'identificador'                       {$$ = new Node($1, NodeType.IDENTIFICADOR); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'true'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'false'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
 /* ------  SENTENCIA IF ------------------------------------------------------------------ */
@@ -568,11 +567,11 @@ VARIABLE_INICIO
   : DECLARACION                           { $$ = $1;}
   | 'identificador' '=' EXPRESION         { $$ = new Node('Asignacion', NodeType.INS_ASIGNACION);
                                             $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                            $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                            $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                             $$.addChild(new Node($2));
                                             $$.addChild($3);
                                           }
-  | 'identificador'                       { $$ = new Node('Variable'); $$.setPosition(this._$.first_line, this._$.first_column);
+  | 'identificador'                       { $$ = new Node('Variable'); $$.setRowCol(this._$.first_line, this._$.first_column);
                                             $$.addChild( new Node($1, NodeType.IDENTIFICADOR));
                                             $$.code = $1;
                                           }
@@ -589,23 +588,23 @@ EXPRESION_FOR
   | 'let' 'identificador' 'in' EXPRESION              { $$ = new Node("Expresion In");
                                                         $$.addChild(new Node($1));
                                                         $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                        $$.childs[1].setPosition(this._$.first_line, this._$.first_column + 4);
+                                                        $$.childs[1].setRowCol(this._$.first_line, this._$.first_column + 4);
                                                         $$.addChild($4);
                                                       }
   | 'let' 'identificador' 'of' EXPRESION              { $$ = new Node("Expresion Of");
                                                         $$.addChild(new Node($1));
                                                         $$.addChild(new Node($2, NodeType.IDENTIFICADOR));                                                          
-                                                        $$.childs[1].setPosition(this._$.first_line, this._$.first_column + 4);
+                                                        $$.childs[1].setRowCol(this._$.first_line, this._$.first_column + 4);
                                                         $$.addChild($4);
                                                       }
   | 'identificador' 'in' EXPRESION                    { $$ = new Node("Expresion In");
                                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                                          
-                                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                         $$.addChild($3);
                                                       }
   | 'identificador' 'of' EXPRESION                    { $$ = new Node("Expresion Of");
                                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                                                                                                    
-                                                        $$.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                        $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                         $$.addChild($3);
                                                       }
 ;
@@ -630,7 +629,7 @@ DO_WHILE
 TYPE
   : 'type' 'identificador' '=' '{' BODY_TYPE '}' ';'          { $$ = new Node("Type", NodeType.INS_TYPE);
                                                                 $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                                $$.childs[0].setPosition(this._$.first_line, this._$.first_column+6);
+                                                                $$.childs[0].setRowCol(this._$.first_line, this._$.first_column+6);
                                                                 $$.addChild(new Node($3));
                                                                 $$.addChild($5);
                                                               } 
@@ -639,7 +638,7 @@ TYPE
 BODY_TYPE
   : 'identificador' ':' DATO OTRO_ATRIBUTO                    { let aux2 = new Node('Atributo');
                                                                 aux2.addChild(new Node($1, NodeType.IDENTIFICADOR));                                                          
-                                                                aux2.childs[0].setPosition(this._$.first_line, this._$.first_column);
+                                                                aux2.childs[0].setRowCol(this._$.first_line, this._$.first_column);
                                                                 aux2.addChild($3); $4.addChildStart(aux2); $$ = $4;
                                                                 $$.code = $1 +':'+$3.code + $4.code;
                                                               }
@@ -655,11 +654,11 @@ OTRO_ATRIBUTO
 /* ------  RETURN  ------------------------------------------------------------------ */
 
 RETURN 
-  : 'return' EXPRESION ';'    { $$ = new Node('Return', NodeType.INS_RETURN);  $$.addChild($2); $$.setPosition(this._$.first_line, this._$.first_column);}
-  | 'return' ';'              { $$ = new Node('Return', NodeType.INS_RETURN); $$.setPosition(this._$.first_line, this._$.first_column);}
+  : 'return' EXPRESION ';'    { $$ = new Node('Return', NodeType.INS_RETURN);  $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'return' ';'              { $$ = new Node('Return', NodeType.INS_RETURN); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
 /*  ---- FUNCIONES NATIVAS --------------------------------------------------------- */
 CONSOLE //Imprimir parametros
-  : 'console' '.' 'log' '(' INGRESO_PARAMETROS ')' ';'        { $$ = new CallFunction('console.log', $5); $$.setPosition(this._$.first_line, this._$.first_column); }
+  : 'console' '.' 'log' '(' INGRESO_PARAMETROS ')' ';'        { $$ = new CallFunction('console.log', $5); $$.setRowCol(this._$.first_line, this._$.first_column); }
 ;

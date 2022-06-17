@@ -1,17 +1,15 @@
 import { DataType } from "./DataType";
+import { Position } from "./Position";
 import { AnalysisError, ErrorType } from "./Error";
 
-export class Value {
+export class Value extends Position{
 
     protected _type:DataType;
     protected _value:any;
-    private _row:number;
-    private _col:number;
 
     constructor(value:any, row:number=0, col:number=0, type:DataType=DataType.UNDEFINED){
+        super(row, col);
         this._type = type;
-        this._row = row;
-        this._col = col;
         this._value = (type === DataType.UNDEFINED ? undefined: value);
     }
 
@@ -27,14 +25,9 @@ export class Value {
     }
 
     //#region SETTERS Y GETTERS **********************************************************************
-    public setValue(value:any, type:DataType):void{
-        this._value = value;
-        this._type = type;
-    }
-
-    public setPosition(row:number, col:number):void{
-        this._col = col;
-        this._row = row;
+    public setValue(value:Value):void{
+        this._value = value.value;
+        this._type = value.type;
     }
 
     public set type(type:DataType){ this._type = type; }
@@ -42,12 +35,6 @@ export class Value {
 
     public set value(value:any){ this._value = value; }
     public get value(){ return this._value }
-
-    public set row(row:number) { this._row = row; }
-    public get row() { return this._row; }
-
-    public set col(col:number) { this._col = col; }
-    public get col() { return this._col; }
     //#endregion
 
     //#region VERIFICAR TIPO DE DATO *****************************************************************
@@ -63,7 +50,7 @@ export class Value {
 
     //#region METODOS PARA ARRAYS ********************************************************************
     public get arraySize():number{
-        if(this._type !== DataType.ARRAY) throw new AnalysisError("Tipo de dato no es array.", ErrorType.SEMANTICO, this._row, this._col);
+        if(this._type !== DataType.ARRAY) throw new AnalysisError("Tipo de dato no es array.", ErrorType.SEMANTICO, this);
         if(!this._value) return 0;
         return this._value.length;
     }

@@ -9,30 +9,28 @@ import { Value } from "./Value";
 export class Symbol extends Value {
     private _id:string;
     private _isConst:boolean;
+    private _symbolType:DataType;
 
-    constructor(id:string, value:any, type:DataType, isConst:boolean=false){
-        super(value, 0, 0, type);
+    constructor(id:string, value:Value, symbolType:DataType, isConst:boolean=false){
+        super(value.value, 0, 0, value.type);
         this._id=id;
         this._isConst=isConst;
+        this._symbolType = (symbolType === DataType.ANY && !value.isUndefined())? value.type : symbolType;
     }
 
     public get id():string { return this._id; }
     public set id(id:string) { this._id=id; }
     public get isConst():boolean { return this._isConst }
-
-    public setValue(value: any, type: DataType): void {
-        this._value = value;
-        if(type !== DataType.ANY && type !== DataType.UNDEFINED)
-            this.type = type;
-    }
+    public get acceptAny():boolean { return this._symbolType === DataType.ANY;}
+    public get symbolTypeTxt():string { return DataType[this._symbolType]; }
 
     /**
      * Verifica si es posible asignarle un valor a un simbolo por su tipo de dato
      * @param value Valor a asignar al simbolo
      * @returns boolean
      */
-    public isAssignable(value:Value):boolean{
-        return this.isUndefined() || this.isAny() || this._type === value.type;
+     public isAssignable(value:Value):boolean{
+        return this.acceptAny || value.isUndefined() || this._symbolType === value.type;
     }
 }
 

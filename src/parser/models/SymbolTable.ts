@@ -2,6 +2,7 @@ import { Symbol } from "./Symbol";
 import { DataType } from "./DataType";
 import { AnalysisError, ErrorType } from "./Error";
 import { Value } from "./Value";
+import { Position } from "./Position";
 
 interface HashTable<T> {
     [key: string]: T;
@@ -40,12 +41,12 @@ export class SymbolTable {
             // Verificar que no sea constante
             if(finded.isConst) throw new AnalysisError(
                 `No se puede actualizar una constante: "${symbol.id}".`,
-                ErrorType.SEMANTICO, symbol.row, symbol.col
+                ErrorType.SEMANTICO, symbol
             );
             // Verificar el tipo de dato
             if(!finded.isAssignable(symbol)) throw new AnalysisError(
                 `"${symbol.typeToStr()}" no es asignable a "${finded.typeToStr()}".`,
-                ErrorType.SEMANTICO, symbol.row, symbol.col
+                ErrorType.SEMANTICO, symbol
             );
             // Se actualiza el simbolo
             this._symbols[symbol.id] = symbol;
@@ -76,39 +77,47 @@ export class SymbolTable {
      * el nuevo simbolo al ámbito actual.
      * @throws AnalysisError
      */
-    public update(id:string, value:any, row:number, col:number, type:DataType=DataType.UNDEFINED):void{
-        const symbol = new Symbol(id, value, type);
-        symbol.setPosition(row, col);
-        // Si el simbolo existe, se actualiza
-        const isUpdated = this.currentUpdate(symbol);
-        // Si el simbolo no existe, se agrega el nuevo simbolo
-        if(!isUpdated) throw new AnalysisError(
-            `"${id}" no ha sido declarada.`,
-            ErrorType.SEMANTICO, row, col
+    public update(id:string, idPosition:Position, value:Value):void{
+        const symbol:Symbol|null = this.find(id);
+        // Si el simbolo no existe, lanzar error
+        if(!symbol) throw new AnalysisError(
+            `La variable: "${id}" no ha sido declarada.`,
+            ErrorType.SEMANTICO, idPosition
         );
+        // Verificar que no sea constante
+        if(symbol.isConst) throw new AnalysisError(
+            `No se puede cambiar el valor de una constante: "${symbol.id}".`,
+            ErrorType.SEMANTICO, idPosition
+        );
+        // Verificar el tipo de dato
+        if(!symbol.isAssignable(value)) throw new AnalysisError(
+            `"${value.typeToStr()}" no es asignable a "${symbol.symbolTypeTxt}".`,
+            ErrorType.SEMANTICO, idPosition
+        );
+        // Se actualiza el simbolo
+        symbol.setValue(value);
     }
 
     /**
      * Crea una variable o constante en el ambito actual
      * @throws AnalysisError
      */
-    public declare(id:string, value:Value, type:DataType, isConstat:boolean):void{
-        const symbol = new Symbol(id, undefined, type, isConstat);
+    public declare(id:string, value:Value, symbolType:DataType, isConstat:boolean):void{
+        const symbol = new Symbol(id, value, symbolType, isConstat);
+        symbol.setPosition(value);
         // Verificar el tipo de dato
         if(!symbol.isAssignable(value)) throw new AnalysisError(
-            `"${value.typeToStr()}" no es asignable a "${symbol.typeToStr()}".`,
-            ErrorType.SEMANTICO, value.row, value.col
+            `"${value.typeToStr()}" no es asignable a "${symbol.symbolTypeTxt}".`,
+            ErrorType.SEMANTICO, value
         );
 
         // Buscando simbolo en entorno actual
         const finded = this._symbols[symbol.id];
         if(!!finded) throw new AnalysisError(
             `"${symbol.id}" ya ha sido declarado en el entorno actual.`,
-            ErrorType.SEMANTICO, value.row, value.col
+            ErrorType.SEMANTICO, value
         );
         // Agregamos el simbolo
-        symbol.setValue(value.value, value.type);
-        symbol.setPosition(value.row, value.col);
         this._symbols[id] = symbol;
     }
 }

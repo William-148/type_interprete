@@ -30,7 +30,8 @@ export class DeclarationList extends Node implements IRunner{
  */
  export class Declaration extends Node implements IRunner{
     
-    private dataType:DataType = DataType.UNDEFINED;
+    private dataType:DataType = DataType.ANY;
+    private _hasExpression:boolean = false;
     private identifier:string;
     private _isConst:boolean;
 
@@ -44,7 +45,10 @@ export class DeclarationList extends Node implements IRunner{
         this.identifier = identifier;
         this._isConst = isConst;
         this.addChild(new Node(identifier));
-        if(!!value) this.addChild(value);
+        if(!!value){ 
+            this.addChild(value);
+            this._hasExpression = true;
+        }
         if(!!dataType) {
             this.addChild(dataType);
             this.defineDataType(dataType.type);
@@ -64,13 +68,13 @@ export class DeclarationList extends Node implements IRunner{
             case NodeType.DT_IDENTIFIER: 
                 this.dataType = DataType.STRUCT; return;
             default: 
-                this.dataType = DataType.UNDEFINED;
+                this.dataType = DataType.ANY;
         }
     }
 
     public run (st: SymbolTable):Value{
         const expression:IRunner = this.childs[1];
-        const expValue:Value = !!expression ?
+        const expValue:Value = !!expression && this._hasExpression ?
             expression.run(st): 
             new Value('', this.row, this.col + this.identifier.length + 1);
         try{

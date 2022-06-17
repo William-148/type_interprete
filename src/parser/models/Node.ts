@@ -1,6 +1,7 @@
 import { NodeType } from "./NodeType";
+import { Position } from "./Position";
 
-export class Node{
+export class Node extends Position{
     //Conteo de numero de nodos creados
     public static count:number = 0;
 
@@ -9,33 +10,19 @@ export class Node{
     protected _name:string;
     protected _type:NodeType;
     protected _childs:Array<any>;
-    protected _col:number;
-    protected _row:number;
 
     constructor(name:string, type: NodeType = NodeType.UNDEFINED){
+        super();
         this._id = Node.count;
         this._name = name;
         this._type = type;
         this._childs = [];
-        this._row = 0;
-        this._col = 0;
         Node.count ++;
     }
 
     public toString = ():string => this.name;
 
     //#region GETTERS AND SETTERS **********************************************************
-    public setPosition(row:number, col:number){
-        this._row = row;
-        this._col = col;
-    }
-
-    public set row(row:number) { this._row = row; }
-    public get row() { return this._row; }
-
-    public set col(col:number) { this._col = col; }
-    public get col() { return this._col; }
-
     public set id(id:number) { this._id = id; }
     public get id() { return this._id; }
 
@@ -53,10 +40,6 @@ export class Node{
     public isIdentifier():boolean { return this._type === NodeType.IDENTIFICADOR; }
     public isSentence():boolean { return this._type === NodeType.SENTENCE}
     //#endregion
-    
-    public printPosition():string{
-        return `Fila:${this._row} Columna:${this._col}`
-    }
 
     public addChild(child:Node):void{
         if(!!child) this._childs.push(child);
