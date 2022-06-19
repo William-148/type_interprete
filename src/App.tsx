@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import TextEditor from './components/TextEditor';
-import { run } from './parser/Interpreter'
+import { Interpreter } from './parser/Interpreter'
 import './App.css';
 import { useState } from 'react';
 
@@ -30,15 +30,13 @@ const Total:number = (
 console.log(name," tiene una nota final de: '",Total, "' sobre '", ponderacion, "'");`
 
 function App() {
-    const [text, setText] = useState(code)
+    const [text, setText] = useState('')
     const [logs, setLogs] = useState("> Console [V:1.0]");
+    const interpreter:Interpreter = new Interpreter();
 
     const execute = (text:string) => {
-        const result = run(text);
-        if(!!result){
-            setLogs(logs+ "\n[Running -----] \n" +result?.logs);
-            console.log(result.dot)
-        }
+        const result:string = interpreter.run(text);
+        if(result !== '') setLogs("[Running -----] \n" +result);
     }
 
     return (

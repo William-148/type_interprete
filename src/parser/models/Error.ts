@@ -13,9 +13,7 @@ export class AnalysisError extends Error{
         super(message);
         this.setName(tipo);
         this._position = new Position(-1,-1);
-        if(!!position){
-            this._position.setPosition(position);
-        }
+        if(!!position) this._position.setPosition(position);
         /*
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, AnalysisError);

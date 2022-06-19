@@ -1,16 +1,17 @@
-import { DataType } from "./DataType";
+import { DataType, StringType } from "./DataType";
 import { Position } from "./Position";
 import { AnalysisError, ErrorType } from "./Error";
 
-export class Value extends Position{
+export class Value{
 
     protected _type:DataType;
     protected _value:any;
+    protected _position:Position;
 
-    constructor(value:any, row:number=0, col:number=0, type:DataType=DataType.UNDEFINED){
-        super(row, col);
+    constructor(value:any, position:Position|null=null, type:DataType=DataType.UNDEFINED){
         this._type = type;
         this._value = (type === DataType.UNDEFINED ? undefined: value);
+        this._position = !!position ? position : new Position();
     }
 
     public toString = ():string => {
@@ -23,6 +24,11 @@ export class Value extends Position{
             default: return '';
         }
     }
+
+    // Position **************************************************************************************
+    public set position(position:Position) { this._position.setPosition(position); }
+    public get position() { return this._position; }
+    public setRowCol(row:number, col:number):void{ this.position.row = row; this.position.col = col;}
 
     //#region SETTERS Y GETTERS **********************************************************************
     public setValue(value:Value):void{
@@ -38,19 +44,19 @@ export class Value extends Position{
     //#endregion
 
     //#region VERIFICAR TIPO DE DATO *****************************************************************
-    public typeToStr = ():string => DataType[this._type];
-    public isNumber = ():boolean => this._type === DataType.NUMBER;
-    public isBool = ():boolean => this._type === DataType.BOOL;
-    public isString = ():boolean => this._type === DataType.STRING;
-    public isUndefined = ():boolean => this._type === DataType.UNDEFINED;
-    public isArray = ():boolean => this._type === DataType.ARRAY;
-    public isStruct = ():boolean => this._type === DataType.STRUCT;
-    public isAny = ():boolean => this._type === DataType.ANY;
+    public get typeStr():string { return StringType(this._type); }
+    public get isNumber():boolean { return this._type === DataType.NUMBER; }
+    public get isBool():boolean { return this._type === DataType.BOOL; }
+    public get isString():boolean { return this._type === DataType.STRING; }
+    public get isUndefined():boolean { return this._type === DataType.UNDEFINED; }
+    public get isArray():boolean { return this._type === DataType.ARRAY; }
+    public get isStruct():boolean { return this._type === DataType.STRUCT; }
+    public get isAny():boolean { return this._type === DataType.ANY; }
     //#endregion
 
     //#region METODOS PARA ARRAYS ********************************************************************
     public get arraySize():number{
-        if(this._type !== DataType.ARRAY) throw new AnalysisError("Tipo de dato no es array.", ErrorType.SEMANTICO, this);
+        if(this._type !== DataType.ARRAY) throw new AnalysisError("Tipo de dato no es array.", ErrorType.SEMANTICO, this._position);
         if(!this._value) return 0;
         return this._value.length;
     }

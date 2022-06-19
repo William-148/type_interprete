@@ -1,38 +1,46 @@
-import { IRunner } from "../models/IRunner";
-import { Node } from "../models/Node";
+import { Node, NodeBase } from "../models/Node";
 import { NodeType } from "../models/NodeType";
 import { Value } from "../models/Value";
 import { SymbolTable } from "../models/SymbolTable";
 import { Display } from "../models/Display";
-import { DataType } from "../models/DataType";
+import { DataType, StringType } from "../models/DataType";
 import { DefineType } from "../dataType/DefineType";
+import { Position } from "../models/Position";
 
 
-export class DeclarationList extends Node implements IRunner{
+export class DeclarationList extends Node{
+    private list:Node[];
     constructor(){
         super("Sentencias", NodeType.SENTENCE);
+        this.list = []
     }
 
     public run (st: SymbolTable):Value{
-        this._childs.forEach((item)=>{
+        this.list.forEach((item)=>{
             item.run(st);
         });
         return new Value('');
     }
-    
-    public getDeclarations():DeclarationList|Declaration{
-        return this._childs.length===1?this._childs[0]:this;
+
+    public add(declaration:Node):void{
+        this.list.push(declaration);
     }
+    
+    public getDeclarations():DeclarationList|Node{
+        return this.list.length===1?this.list[0]:this;
+    }
+
+    public getChilds():Node[]{ return this.list; }
 }
 
 /**
  * Permite la declaración y asingación de varialbes
  */
- export class Declaration extends Node implements IRunner{
+ export class Declaration extends Node{
     
-    private dataType:DataType = DataType.ANY;
-    private _hasExpression:boolean = false;
     private identifier:string;
+    private expression:Node|null;
+    private dataType:DataType = DataType.ANY;
     private _isConst:boolean;
 
     /**
@@ -41,18 +49,18 @@ export class DeclarationList extends Node implements IRunner{
      * @param dataType Tipo de dato que per
      */
     constructor(identifier:string, value:Node|null, dataType:DefineType|null=null, isConst:boolean=false){
-        super("Declaración", NodeType.INS_DECLARACION);
+        super("Declaración", NodeType.INS_DECLARATION);
         this.identifier = identifier;
+        this.expression = value;
+        if(!!dataType) this.defineDataType(dataType.type);
         this._isConst = isConst;
-        this.addChild(new Node(identifier));
-        if(!!value){ 
-            this.addChild(value);
-            this._hasExpression = true;
-        }
-        if(!!dataType) {
-            this.addChild(dataType);
-            this.defineDataType(dataType.type);
-        }
+    }
+
+    public getChilds():Node[]{ 
+        const list:Node[] = [new NodeBase(this.identifier)]; 
+        if(!!this.expression) list.push(this.expression);
+        list.push(new NodeBase(StringType(this.dataType)));
+        return list;
     }
 
     public set isConst(isConst:boolean) { this._isConst = isConst; }
@@ -60,28 +68,27 @@ export class DeclarationList extends Node implements IRunner{
     private defineDataType(dataType:NodeType):void{
         switch(dataType){
             case NodeType.DT_STRING: 
-                this.dataType = DataType.STRING; return;
+                this.dataType = DataType.STRING; break;
             case NodeType.DT_BOOLEAN: 
-                this.dataType = DataType.BOOL; return;
+                this.dataType = DataType.BOOL; break;
             case NodeType.DT_NUMBER: 
-                this.dataType = DataType.NUMBER; return;
+                this.dataType = DataType.NUMBER; break;
             case NodeType.DT_IDENTIFIER: 
-                this.dataType = DataType.STRUCT; return;
+                this.dataType = DataType.STRUCT; break;
             default: 
                 this.dataType = DataType.ANY;
         }
     }
 
     public run (st: SymbolTable):Value{
-        const expression:IRunner = this.childs[1];
-        const expValue:Value = !!expression && this._hasExpression ?
-            expression.run(st): 
-            new Value('', this.row, this.col + this.identifier.length + 1);
+        const expValue:Value = !!this.expression ? 
+            this.expression.run(st):
+            new Value('', new Position(this._position.row, this._position.col + this.identifier.length + 1));
         try{
             st.declare(this.identifier, expValue, this.dataType, this._isConst);
         }catch(error){
             Display.error(error);
         }
-        return new Value('');
+        return new Value('', this._position);
     }
 }

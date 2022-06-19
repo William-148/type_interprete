@@ -1,26 +1,41 @@
-import {parse} from './grammar'
+import { parse } from './grammar'
 import { Node } from './models/Node';
 import { Display } from './models/Display';
 import { SymbolTable } from './models/SymbolTable';
 
-export function run(input:string){
-    //Ejecutar Parser
-    Node.count = 0; 
-    const { tree, errors} = parse(input);
-    if(!tree) return undefined;
-    //Generando grafica del AST
-    const dot = Node.graph(tree);
-    //Iniciando ejecución de código
-    Display.clear();
-    errors.forEach((item:any)=>{
-        Display.error(item);
-    })
-    let st = new SymbolTable();
-    tree.childs.forEach((element:any) => {
-        if(!!element.run) element.run(st);
-    });
-    return {
-        "logs": Display.logs,
-        dot
+export class Interpreter {
+    private AST:Node|null;
+    constructor(){
+        this.AST = null;
+    }
+
+    /**
+     * Executes the code contained in a string.
+     * @param input String that contains the code to execute.
+     * @returns String that contains logs of the result of the execution.
+     */
+    public run(input:string):string{
+        //Ejecutar Parser
+        const returned = parse(input);
+        const tree:Node = returned.tree;
+        const errors:any[] = returned.errors;
+        if(!tree) return '';
+        //Iniciando ejecución de código
+        Display.clear();
+        errors.forEach((item:any)=>{
+            Display.error(item);
+        })
+        let st = new SymbolTable();
+        tree.run(st);
+        this.AST = tree;
+        return Display.logs;
+    }
+
+    /**
+     * Returns the Abstract Syntax Tree in graphviz code of the last execution.
+     */
+    public get dotAST():string{
+        if(!!this.AST) return this.AST.getDot();
+        return '';
     }
 }

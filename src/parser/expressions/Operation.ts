@@ -1,5 +1,4 @@
 import { Node } from '../models/Node';
-import { IRunner } from "../models/IRunner";
 import { NodeType } from '../models/NodeType';
 import { SymbolTable } from '../models/SymbolTable';
 import { Value } from '../models/Value';
@@ -8,29 +7,32 @@ import { AnalysisError, ErrorType } from '../models/Error';
 import { Display } from '../models/Display';
 
 // CLASE OPERACIONES BINARIAS ************************************************************************
-export class BinaryOperation extends Node implements IRunner{
+export class BinaryOperation extends Node{
+    private leftExpression:Node;
+    private rightExpression:Node;
+
     constructor(exp1:Node, exp2:Node, operator:string){
         super(operator, NodeType.OP_BINARY);
-        this.addChild(exp1);
-        this.addChild(exp2);
+        this.leftExpression = exp1;
+        this.rightExpression = exp2;
+    }
+
+    public getChilds():Node[]{
+        return [this.leftExpression, this.rightExpression];
     }
 
     public run (st: SymbolTable):Value{
-        // Obteniendo expresiones
-        let exp1:IRunner = this.childs[0];
-        let exp2:IRunner = this.childs[1];
-
         // Obteniendo valores de las expresiones
-        let val1:Value = exp1.run(st);
-        let val2:Value = exp2.run(st);
+        let val1:Value = this.leftExpression.run(st);
+        let val2:Value = this.rightExpression.run(st);
 
         try{
             let result:Value = this.binaryOperation(val1, val2, this.name);
-            result.setPosition(this);
+            result.position = this._position;
             return result;
         }catch(error){
             Display.error(error);
-            return new Value('', this.row, this.col);
+            return new Value('', this._position);
         }
     }
 
@@ -41,17 +43,17 @@ export class BinaryOperation extends Node implements IRunner{
      */
      private binaryOperation(val1:Value, val2:Value, operation:string):Value{
         // Operación Número-Número
-        if(val1.isNumber() && val2.isNumber()){
+        if(val1.isNumber && val2.isNumber){
             const result:number = this.numericalOperation(val1, val2, operation);
-            return new Value(result, 0, 0, DataType.NUMBER);
+            return new Value(result, val1.position, DataType.NUMBER);
         }
         // Operación con String
-        if((val1.isString() || val2.isString()) && operation === '+'){
-            return new Value(val1.value + val2.value, 0, 0, DataType.STRING);
+        if((val1.isString || val2.isString) && operation === '+'){
+            return new Value(val1.value + val2.value, val1.position, DataType.STRING);
         }
         throw new AnalysisError(
-            `Operación "${operation}" no se puede realizar entre ${val1.typeToStr()}-${val2.typeToStr()}`,
-            ErrorType.SEMANTICO, this
+            `Operación "${operation}" no se puede realizar entre ${val1.typeStr}-${val2.typeStr}`,
+            ErrorType.SEMANTICO, this._position
         );
     }
 

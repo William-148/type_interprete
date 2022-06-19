@@ -1,7 +1,8 @@
 // Importación y declaraciones
 
 %{
-    const { Node } = require('./models/Node');
+    const { NodeBase } = require('./models/Node');
+    const { Position } = require('./models/Position');
     const { NodeType } = require('./models/NodeType');
     const { AnalysisError, ErrorType } = require('./models/Error');
     const { Null, Number, String, Bool, Identifier } = require('./expressions/Primitive');
@@ -11,10 +12,11 @@
     const { Declaration, DeclarationList } = require('./instructions/Declaration');
     const { CallFunction } = require('./instructions/CallFunction');
     const { Assign } = require('./instructions/Assign');
-    let nodo_inicio = new Node('START');
+    const { SingleLine } = require('./instructions/SingleLine');
     let errorList = [];
-    nodo_inicio.id = 0; 
-    Node.count = 1;
+    //let nodo_inicio = new NodeBase('START');
+    //nodo_inicio.id = 0; 
+    //Node.count = 1;
 %}
 
 /* #########################################  ANÁLISIS LÉXICO  ################################################# */
@@ -135,7 +137,7 @@ cadena_t                ({comilla}((?:\\{comilla}|(?:(?!{comilla}).))*){comilla}
 <<EOF>>                 return 'EOF'; // Token fin de archivo
 
 //Mensaje y recuperacion de errores lexicos
-.                       { errorList.push(new AnalysisError('Carácter desconocido "'+yytext+'".', ErrorType.LEXICO, yylloc.first_line, yylloc.first_column));
+.                       { errorList.push(new AnalysisError('Carácter desconocido "'+yytext+'".', ErrorType.LEXICO, new Position(yylloc.first_line, yylloc.first_column)));
                         console.error('Error Lexico: ' + yytext + ' en la linea ' + yylloc.first_line + ' y columna ' + yylloc.first_column); }
 /lex
 
@@ -168,9 +170,9 @@ INICIO
 
 /*********************** CREACIÓN DEL BODY - SENTENCIAS, DECLARACIÓN DE FUNCIONES Y STRUCTS ***********************/
 BODY_LIST
-    : BODY_LIST BODY                { $1.addChild($2); $$ = $1; }
-    | BODY                          {  if($1.isSentence()) $$ = $1; 
-                                       else {  $$ = new Sentence(); $$.addChild($1); }
+    : BODY_LIST BODY                { $1.add($2); $$ = $1; }
+    | BODY                          {  if($1.isSentence) $$ = $1; 
+                                       else {  $$ = new Sentence(); $$.add($1); }
                                     } 
 ;
 
@@ -178,30 +180,32 @@ BODY
     : TYPE                          { $$ = $1; }
     | FUNCION                       { $$ = $1; }
     | SENTENCE                      { $$ = $1; }
-    | 'EOF'
+    | 'EOF'                         { $$ = new NodeBase('EOF'); }
 ;
 
 /**************************************** CREACIÓN DE LISTA DE SENTENCIAS ****************************************/
 SENTENCES_LIST
-    : SENTENCES_LIST SENTENCE       { $1.addChild($2); $$ = $1; }     
-    | SENTENCE                      { $$ = new Sentence(); $$.addChild($1); }
+    : SENTENCES_LIST SENTENCE       { $1.add($2); $$ = $1; }     
+    | SENTENCE                      { $$ = new Sentence(); $$.add($1); }
 ;
 
 SENTENCE
     : 'let' DECLARATION_LIST ';'    { $$ = $2.getDeclarations(); }
     | 'const' CONST_LIST ';'        { $$ = $2.getDeclarations(); }
     | ASSIGNMENT                    { $$ = $1; }
+    | CONSOLE                       { $$ = $1; }
+    /*
     | IF                            { $$ = $1; }
     | SWITCH                        { $$ = $1; }
     | FOR                           { $$ = $1; }
     | WHILE                         { $$ = $1; }
     | DO_WHILE                      { $$ = $1; }
-    | CONSOLE                       { $$ = $1; }
     | RETURN                        { $$ = $1; }
-    | 'break' ';'                   { $$ = new Node($1, NodeType.INS_BREAK); $$.setRowCol(this._$.first_line, this._$.first_column); }
-    | 'continue' ';'                { $$ = new Node($1, NodeType.INS_CONTINUE); $$.setRowCol(this._$.first_line, this._$.first_column);}
-    | error                         { errorList.push(new AnalysisError('Token "'+yytext+'" no esperado.', ErrorType.SINTACTICO, this._$.first_line, this._$.first_column));
-                                      $$ = new Node('', NodeType.ERROR);
+    | 'break' ';'                   { $$ = new NodeBase($1, NodeType.INS_BREAK); $$.setRowCol(this._$.first_line, this._$.first_column); }
+    | 'continue' ';'                { $$ = new NodeBase($1, NodeType.INS_CONTINUE); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    */
+    | error                         { errorList.push(new AnalysisError('Token "'+yytext+'" no esperado.', ErrorType.SINTACTICO, new Position(this._$.first_line, this._$.first_column)));
+                                      $$ = new NodeBase('Error', NodeType.ERROR);
                                     }
 ;
 
@@ -232,8 +236,8 @@ BRACKET
 /***************************************** REGLAS PARA VARIABLES *****************************************/
 /*--------------------- Declaracion de variables y asignacion ---------------------*/
 DECLARATION_LIST
-    : DECLARATION_LIST ',' DECLARATION                  { $$ = $1; $$.addChild($3); }
-    | DECLARATION                                       { $$ = new DeclarationList(); $$.addChild($1); }
+    : DECLARATION_LIST ',' DECLARATION                  { $$ = $1; $$.add($3); }
+    | DECLARATION                                       { $$ = new DeclarationList(); $$.add($1); }
 ;
 
 DECLARATION
@@ -253,8 +257,8 @@ DECLARATION
 ;
 
 CONST_LIST
-    : CONST_LIST ',' CONST_DECLARATION                 { $$ = $1; $$.addChild($3); }
-    | CONST_DECLARATION                                { $$ = new DeclarationList(); $$.addChild($1); }
+    : CONST_LIST ',' CONST_DECLARATION                 { $$ = $1; $$.add($3); }
+    | CONST_DECLARATION                                { $$ = new DeclarationList(); $$.add($1); }
 ;
 
 CONST_DECLARATION
@@ -269,115 +273,21 @@ CONST_DECLARATION
 /*---------------------------- Asignacion de variables ----------------------------*/
 ASSIGNMENT
     : EXPRESION '=' EXPRESION ';'                       { $$ = new Assign($1, $3); }
-    | EXPRESION  ';'                                    {   if($1.type === NodeType.INS_LLAMADA_FUNCION){
-                                                                $$ = $1;
-                                                            }else{        
-                                                                $$ = new Node('Expresion', NodeType.INS_EXPRESION);
-                                                                $$.addChild($1);
-                                                            }
+    | EXPRESION  ';'                                    {   if($1.type === NodeType.INS_CALL_FUNCTION) $$ = $1;
+                                                            else $$ = new SingleLine($1);
                                                         }
 ;
 
-/*********************** OLD **********************######################################################################################################################################*/
-DATO 
-  : PRIMITIVO CORCHETES                  { $2.name = $1.name; $$ = $2;}
-  | 'Array' '<' DATO '>'                 { $$ = new Node($1, NodeType.DATA_TYPE);
-                                           $$.addChild($3);
-                                         }
+/*  ---- FUNCIONES NATIVAS --------------------------------------------------------- */
+CONSOLE //Imprimir parametros
+    : 'console' '.' 'log' '(' PASSING_PARAMETERS ')' ';'        { $$ = new CallFunction('console.log', $5); $$.setRowCol(this._$.first_line, this._$.first_column); }
 ;
 
-CORCHETES
-  : CORCHETES '[' ']'             { $1.addChild(new Node('[]'));}
-  |                               { $$ = new Node('Array', NodeType.DATA_TYPE);}
+PASSING_PARAMETERS
+    : PASSING_PARAMETERS ',' EXPRESION                  { $$ = $1; $$.add($3); }
+    | EXPRESION                                         { $$ = new Sentence(); $$.add($1); }
 ;
 
-TIPO_DATO 
-  : ':' DATO                      { $$ = $2;}
-  //|                               { $$ = new Node('null');}
-;
-
-TIPO_RETORNO 
-  : ':' TIPO_RETORNO_             { $$ = $2; }
-  //|                               { $$ = new Node('null'); }
-;
-
-TIPO_RETORNO_ 
-  : DATO                          { $$ = $1; }
-  | 'void'                        { $$ = new Node('void', NodeType.DATA_TYPE); }
-;
-
-/* ------  REGLAS PARA FUNCIONES ------------------------------------------------------------------ */
-FUNCION           
-  : 'function' 'identificador' '(' PARAMETROS ')' TIPO_RETORNO '{' SENTENCES_LIST '}'   {$$ = new Node('Funcion', NodeType.INS_FUNCION);
-                                                                               $$.setRowCol(this._$.first_line, this._$.first_column);
-                                                                               $$.addChild(new Node($2));
-                                                                               $$.childs[0].setRowCol(this._$.first_line, this._$.first_column+$1.length+1);
-                                                                               $$.addChild($4);
-                                                                               $$.addChild($6);
-                                                                               $$.addChild($8);
-                                                                              }  
-                                                                                                                                                                                        
-;
-
-PARAMETROS
-  : PARAMETROS ',' 'identificador' TIPO_DATO  { let aux = new Node('Parametro');
-                                                aux.addChild(new Node($3, NodeType.IDENTIFICADOR));                                                  
-                                                aux.childs[0].setRowCol(this._$.first_line, this._$.first_column+3);
-                                                aux.addChild($4);
-                                                $1.addChild(aux);
-                                              }
-  | PARAMETROS 'identificador' TIPO_DATO      { let aux1 = new Node('Parametro');
-                                                aux1.addChild(new Node($2, NodeType.IDENTIFICADOR));
-                                                aux1.childs[0].setRowCol(this._$.first_line, this._$.first_column);
-                                                aux1.addChild($3);
-                                                $1.addChild(aux1);
-                                              }
-  |                                           { $$ = new Node('Parametros');}
-;
-
-
-  
-
-/* ------  REGLAS PARA VARIABLES ------------------------------------------------------------------ */
-
-
-
-
-/* ---------------- Llamada funcion ------------------------  */
-LLAMADA_FUNCION
-  : 'identificador' '(' INGRESO_PARAMETROS ')'    { $$ = new Node('Llamada Funcion', NodeType.INS_LLAMADA_FUNCION);
-                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
-                                                    $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
-                                                    $$.addChild($3);
-                                                  }
-;
-
-INGRESO_PARAMETROS
-  : EXPRESION INGRESO_PARAMETROS_                 {$2.addChildStart($1); $$ = $2;}
-  |                                               {$$ = new Node('Parametros');}
-;
-
-INGRESO_PARAMETROS_     
-  : ',' EXPRESION INGRESO_PARAMETROS_             {$3.addChildStart($2);$$ = $3; }
-  |                                               {$$ = new Node('Parametros');}
-;
-
-//LLAMADA ARRAY -----------------------------------------------------------------
-
-LLAMADA_ARRAY
-  :  'identificador' POSICION_ARRAY               { $$ = new Node('Llamada Array', NodeType.INS_LLAMADA_ARRAY);
-                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
-                                                    $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
-                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
-                                                    $$.addChild($2);
-                                                  }   
-;
-
-POSICION_ARRAY
-  : POSICION_ARRAY  '[' EXPRESION ']'             { $1.addChild($3); }
-  | '[' EXPRESION ']'                             { $$ = new Node('Posicion Array'); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-;
 
 /* ------  VALOR DE DATOS ------------------------------------------------------------------ */
 
@@ -392,6 +302,7 @@ EXPRESION
   | EXPRESION '/' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | EXPRESION '**' EXPRESION      { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | EXPRESION '%' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+ /*
   | '-' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.MINUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}    
   | '+' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.PLUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
 
@@ -440,14 +351,14 @@ EXPRESION
                                               $$.addChild($3); 
                                               $$.addChild($5); 
                                               $$.setRowCol(this._$.first_line, this._$.first_column); }
-  
+ 
   //DATOS COMPLEJOS
   | '[' DATO_ARRAY']'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
   | '{' DATO_TYPE '}'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'new' 'Array' '(' EXPRESION ')'         { $$ = new Node('New Array', NodeType.INS_NEW_ARRAY); 
                                               $$.addChild($4);
                                               $$.setRowCol(this._$.first_line, this._$.first_column);}
-
+*/
   //DATOS PRIMITIVOS                   
   | 'numero'                      { $$ = new Number($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'decimal'                     { $$ = new Number($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
@@ -460,6 +371,114 @@ EXPRESION
   | 'null'                        { $$ = new Null(); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'undefined'                   { $$ = new Null(); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
+
+
+/*********************** OLD **********************######################################################################################################################################*/
+/*
+DATO 
+  : PRIMITIVO CORCHETES                  { $2.name = $1.name; $$ = $2;}
+  | 'Array' '<' DATO '>'                 { $$ = new Node($1, NodeType.DATA_TYPE);
+                                           $$.addChild($3);
+                                         }
+;
+
+CORCHETES
+  : CORCHETES '[' ']'             { $1.addChild(new Node('[]'));}
+  |                               { $$ = new Node('Array', NodeType.DATA_TYPE);}
+;
+
+TIPO_DATO 
+  : ':' DATO                      { $$ = $2;}
+  //|                               { $$ = new Node('null');}
+;
+
+TIPO_RETORNO 
+  : ':' TIPO_RETORNO_             { $$ = $2; }
+  //|                               { $$ = new Node('null'); }
+;
+
+TIPO_RETORNO_ 
+  : DATO                          { $$ = $1; }
+  | 'void'                        { $$ = new Node('void', NodeType.DATA_TYPE); }
+;
+
+/* ------  REGLAS PARA FUNCIONES ------------------------------------------------------------------ 
+FUNCION           
+  : 'function' 'identificador' '(' PARAMETROS ')' TIPO_RETORNO '{' SENTENCES_LIST '}'   {$$ = new Node('Funcion', NodeType.INS_FUNCION);
+                                                                               $$.setRowCol(this._$.first_line, this._$.first_column);
+                                                                               $$.addChild(new Node($2));
+                                                                               $$.childs[0].setRowCol(this._$.first_line, this._$.first_column+$1.length+1);
+                                                                               $$.addChild($4);
+                                                                               $$.addChild($6);
+                                                                               $$.addChild($8);
+                                                                              }  
+                                                                                                                                                                                        
+;
+
+PARAMETROS
+  : PARAMETROS ',' 'identificador' TIPO_DATO  { let aux = new Node('Parametro');
+                                                aux.addChild(new Node($3, NodeType.IDENTIFICADOR));                                                  
+                                                aux.childs[0].setRowCol(this._$.first_line, this._$.first_column+3);
+                                                aux.addChild($4);
+                                                $1.addChild(aux);
+                                              }
+  | PARAMETROS 'identificador' TIPO_DATO      { let aux1 = new Node('Parametro');
+                                                aux1.addChild(new Node($2, NodeType.IDENTIFICADOR));
+                                                aux1.childs[0].setRowCol(this._$.first_line, this._$.first_column);
+                                                aux1.addChild($3);
+                                                $1.addChild(aux1);
+                                              }
+  |                                           { $$ = new Node('Parametros');}
+;
+
+
+  
+
+/* ------  REGLAS PARA VARIABLES ------------------------------------------------------------------ 
+
+
+
+
+/* ---------------- Llamada funcion ------------------------  
+LLAMADA_FUNCION
+  : 'identificador' '(' INGRESO_PARAMETROS ')'    { $$ = new Node('Llamada Funcion', NodeType.INS_LLAMADA_FUNCION);
+                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
+                                                    $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
+                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
+                                                    $$.addChild($3);
+                                                  }
+;
+
+INGRESO_PARAMETROS
+  : EXPRESION INGRESO_PARAMETROS_                 {$2.addChildStart($1); $$ = $2;}
+  |                                               {$$ = new Node('Parametros');}
+;
+
+INGRESO_PARAMETROS_     
+  : ',' EXPRESION INGRESO_PARAMETROS_             {$3.addChildStart($2);$$ = $3; }
+  |                                               {$$ = new Node('Parametros');}
+;
+
+//LLAMADA ARRAY -----------------------------------------------------------------
+
+LLAMADA_ARRAY
+  :  'identificador' POSICION_ARRAY               { $$ = new Node('Llamada Array', NodeType.INS_LLAMADA_ARRAY);
+                                                    $$.setRowCol(this._$.first_line, this._$.first_column);
+                                                    $$.addChild(new Node($1, NodeType.IDENTIFICADOR));
+                                                    $$.childs[0].setRowCol(this._$.first_line, this._$.first_column);
+                                                    $$.addChild($2);
+                                                  }   
+;
+
+POSICION_ARRAY
+  : POSICION_ARRAY  '[' EXPRESION ']'             { $1.addChild($3); }
+  | '[' EXPRESION ']'                             { $$ = new Node('Posicion Array'); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+;
+
+/* ------  VALOR DE DATOS ------------------------------------------------------------------ 
+
+//-----------------------------------------------------------------------------------------------
+
 
 // Asignar valor a atributos types ------------------------------------------------------------------------------
 DATO_TYPE
@@ -498,17 +517,17 @@ CONSTANT
   | 'cadena_t'                            {$$ = new Node($1, NodeType.STRING); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'identificador'                       {$$ = new Node($1, NodeType.IDENTIFICADOR); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'true'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | 'false'                                {$$ = new Node($1, NodeType.BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | 'false'                               {$$ = new Node($1, NodeType.BOOLEAN); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
-/* ------  SENTENCIA IF ------------------------------------------------------------------ */
+/* ------  SENTENCIA IF ------------------------------------------------------------------ 
 IF
   : 'if' '(' EXPRESION ')' '{' SENTENCES_LIST '}' ELSE_IF  { $$ = new Node("Instruccion if", NodeType.INS_IF)
                                                    $$.addChild($3);
                                                    $$.addChild($6);
                                                    $$.addChild($8);
                                                   }
-  | 'if' error           { errorList.push(new AnalysisError('Token "'+yytext+'" no esperado.', ErrorType.SINTACTICO, this._$.first_line, this._$.first_column));
+  | 'if' error           { errorList.push(new AnalysisError('Token "'+yytext+'" no esperado.', ErrorType.SINTACTICO, new Position(this._$.first_line, this._$.first_column)));
                            $$ = new Node('', NodeType.ERROR);}
 ;
 
@@ -528,7 +547,7 @@ ELSE_IF_BODY
                                                   }
 ;
 
-/* ------  SENTENCIA SWITCH ------------------------------------------------------------------ */
+/* ------  SENTENCIA SWITCH ------------------------------------------------------------------ 
 
 SWITCH
   : 'switch' '(' EXPRESION  ')' '{' CASE  DEFAULT '}'     { $$ = new Node("Instruccion Switch", NodeType.INS_SWITCH)
@@ -554,7 +573,7 @@ DEFAULT
   |                                                       { $$ = null; }
 ;
 
-/* ------  SENTENCIA FOR ------------------------------------------------------------------ */
+/* ------  SENTENCIA FOR ------------------------------------------------------------------ 
 
 FOR
   : 'for' '(' EXPRESION_FOR ')' '{' SENTENCES_LIST '}'  { $$ = new Node("Instruccion For", NodeType.INS_FOR)
@@ -609,7 +628,7 @@ EXPRESION_FOR
                                                       }
 ;
 
-/* ------  WHILE ------------------------------------------------------------------ */
+/* ------  WHILE ------------------------------------------------------------------ 
 WHILE
   : 'while' '(' EXPRESION ')' '{' SENTENCES_LIST '}'            { $$ = new Node("Instruccion\\n While", NodeType.INS_WHILE)
                                                         $$.addChild($3);
@@ -617,7 +636,7 @@ WHILE
                                                       } 
 ;
 
-/* ------  DO WHILE ------------------------------------------------------------------ */
+/* ------  DO WHILE ------------------------------------------------------------------ 
 DO_WHILE
   : 'do' '{' SENTENCES_LIST '}' 'while' '(' EXPRESION ')' ';'           { $$ = new Node("Instruccion\\n Do While", NodeType.INS_DO_WHILE)
                                                                 $$.addChild($3);
@@ -625,7 +644,7 @@ DO_WHILE
                                                               } 
 ;
 
-/* ------  TYPE ------------------------------------------------------------------ */
+/* ------  TYPE ------------------------------------------------------------------ 
 TYPE
   : 'type' 'identificador' '=' '{' BODY_TYPE '}' ';'          { $$ = new Node("Type", NodeType.INS_TYPE);
                                                                 $$.addChild(new Node($2, NodeType.IDENTIFICADOR));
@@ -651,14 +670,11 @@ OTRO_ATRIBUTO
   | BODY_TYPE                                                 {$$ = $1}
 ;
 
-/* ------  RETURN  ------------------------------------------------------------------ */
+/* ------  RETURN  ------------------------------------------------------------------ 
 
 RETURN 
   : 'return' EXPRESION ';'    { $$ = new Node('Return', NodeType.INS_RETURN);  $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
   | 'return' ';'              { $$ = new Node('Return', NodeType.INS_RETURN); $$.setRowCol(this._$.first_line, this._$.first_column);}
 ;
 
-/*  ---- FUNCIONES NATIVAS --------------------------------------------------------- */
-CONSOLE //Imprimir parametros
-  : 'console' '.' 'log' '(' INGRESO_PARAMETROS ')' ';'        { $$ = new CallFunction('console.log', $5); $$.setRowCol(this._$.first_line, this._$.first_column); }
-;
+*/

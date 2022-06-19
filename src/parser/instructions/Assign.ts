@@ -1,4 +1,3 @@
-import { IRunner } from "../models/IRunner";
 import { Node } from "../models/Node";
 import { NodeType } from "../models/NodeType";
 import { Value } from "../models/Value";
@@ -10,7 +9,9 @@ import { AnalysisError, ErrorType } from "../models/Error";
 /**
  * Permite la manipulación de las asignaciones a variables
  */
- export class Assign extends Node implements IRunner{
+ export class Assign extends Node{
+    private variable:Node;
+    private expression:Node;
 
     /**
      * @param variable Nodo que contiene estructura la cual se le asignará un valor 
@@ -18,25 +19,23 @@ import { AnalysisError, ErrorType } from "../models/Error";
      * @param dataType Tipo de dato que per
      */
     constructor(variable:Node, value:Node){
-        super("Asignación", NodeType.INS_ASIGNACION);
-        this.addChild(variable);
-        this.addChild(value);
+        super("Asignación", NodeType.INS_ASSIGNMENT);
+        this.variable = variable;
+        this.expression = value;
     }
 
     public run(st: SymbolTable):Value{
-        const variable:Node = this._childs[0];
-        const expression:IRunner = this._childs[1];
         try{
-            const toAssing = expression.run(st);
-            if(variable.type === NodeType.IDENTIFICADOR){
-                st.update(variable.name, variable, toAssing);
+            const toAssing:Value = this.expression.run(st);
+            if(this.variable.isIdentifier){
+                st.update(this.variable.name, this.variable.position, toAssing);
             }
             else{
                 Display.error(
                     new AnalysisError(
                         'Solo se puede asignar valor a una variable, array o type',
                         ErrorType.SEMANTICO,
-                        variable
+                        this.variable.position
                     )
                 );
             }
@@ -45,5 +44,7 @@ import { AnalysisError, ErrorType } from "../models/Error";
         }
         return new Value('');
     }
+
+    public getChilds():Node[]{ return [this.variable, this.expression]}
 
 }

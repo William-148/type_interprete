@@ -3,10 +3,9 @@ import { NodeType } from '../models/NodeType';
 import { SymbolTable } from '../models/SymbolTable';
 import { Value } from '../models/Value';
 import { DataType } from '../models/DataType';
-import { IRunner } from '../models/IRunner';
 
 // CLASE INDEFINIDO ************************************************************************
-export class Null extends Node implements IRunner{
+export class Null extends Node{
     constructor(){
         super('Null', NodeType.UNDEFINED);
     }
@@ -14,53 +13,63 @@ export class Null extends Node implements IRunner{
     public toString = ():string => 'undefined'
 
     public run (st: SymbolTable):Value{
-        return new Value('', this.row, this.col);
+        return new Value('', this._position);
     }
+
+    public getChilds():Node[] { return []; }
 }
 
 // CLASE NUMERO ****************************************************************************
-export class Number extends Node implements IRunner{
+export class Number extends Node{
     constructor(number:string){
         super(number, NodeType.NUMBER);
     }
 
     public run (st: SymbolTable):Value{
-        return new Value(+this.name, this.row, this.col, DataType.NUMBER);
+        return new Value(+this.name, this._position, DataType.NUMBER);
     }
+
+    public getChilds():Node[] { return []; }
 }
 
 // CLASE NUMERO ****************************************************************************
-export class String extends Node implements IRunner{
+export class String extends Node{
     constructor(stringData:string){
         super(stringData, NodeType.STRING);
     }
 
     public run (st: SymbolTable):Value{
-        return new Value(this.name, this.row, this.col, DataType.STRING);
+        return new Value(this.name, this._position, DataType.STRING);
     }
+
+    public getChilds():Node[] { return []; }
 }
 
 // CLASE BOOLEAN ****************************************************************************
-export class Bool extends Node implements IRunner{
+export class Bool extends Node{
     constructor(booleano:string){
         super(booleano, NodeType.BOOLEAN);
     }
 
     public run (st: SymbolTable):Value{
-        return new Value(this.name==='true', this.row, this.col, DataType.BOOL);
+        return new Value(this.name==='true', this._position, DataType.BOOL);
     }
+
+    public getChilds():Node[] { return []; }
 }
 
 // CLASE IDENTIFIER ****************************************************************************
-export class Identifier extends Node implements IRunner{
+export class Identifier extends Node{
     constructor(identifier:string){
-        super(identifier, NodeType.IDENTIFICADOR);
+        super(identifier, NodeType.IDENTIFIER);
     }
 
     public run (st: SymbolTable):Value{
         const finded:Value|null = st.find(this.name);
-        if(!finded) return new Value('');
+        if(!finded) return new Value('', this._position);
         return finded;
     }
+
+    public getChilds():Node[] { return []; }
 }
 

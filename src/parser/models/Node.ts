@@ -1,98 +1,77 @@
+import { IRunner } from "./IRunner";
 import { NodeType } from "./NodeType";
 import { Position } from "./Position";
+import { SymbolTable } from "./SymbolTable";
+import { Value } from "./Value";
 
-export class Node extends Position{
-    //Conteo de numero de nodos creados
-    public static count:number = 0;
-
-    //Campos de clase
-    private _id:number;
+export abstract class Node implements IRunner{
     protected _name:string;
     protected _type:NodeType;
-    protected _childs:Array<any>;
+    protected _position:Position;
 
-    constructor(name:string, type: NodeType = NodeType.UNDEFINED){
-        super();
-        this._id = Node.count;
+    constructor(name:string, type:NodeType=NodeType.UNDEFINED){
         this._name = name;
         this._type = type;
-        this._childs = [];
-        Node.count ++;
+        this._position = new Position();
     }
 
-    public toString = ():string => this.name;
-
-    //#region GETTERS AND SETTERS **********************************************************
-    public set id(id:number) { this._id = id; }
-    public get id() { return this._id; }
-
+    //#region GETTERS AND SETTERS ******************************************************************
     public set name(name:string) { this._name = name; }
     public get name() { return this._name; }
-
+    
     public set type(type:NodeType) { this._type = type; }
     public get type() { return this._type; }
+    
+    public set position(position:Position) { this._position = position; }
+    public get position() { return this._position; }
+    public setRowCol(row:number, col:number):void{ this.position.row = row; this.position.col = col;}
 
-    public get childs() { return this._childs; }
-    public get sizeChilds() { return this._childs.length; }
+    public get isIdentifier():boolean { return this._type === NodeType.IDENTIFIER; }
+    public get isSentence():boolean { return this._type === NodeType.SENTENCE; }
     //#endregion
 
-    //#region VERIFY TYPES ******************************************************************
-    public isIdentifier():boolean { return this._type === NodeType.IDENTIFICADOR; }
-    public isSentence():boolean { return this._type === NodeType.SENTENCE}
-    //#endregion
+    /**
+     * Returns an array with the children of a node.
+     */
+    abstract getChilds():Node[];
 
-    public addChild(child:Node):void{
-        if(!!child) this._childs.push(child);
-    }
+    abstract run(st: SymbolTable):Value;
 
-    public addChildStart(child:Node):void{
-        if(!!child) this._childs.unshift(child);
-    }
-
-    //#region  METODOS PARA OBTENER CODIGO JSON ***********************************************************************
-    public toJson(){
-        let json_txt:string;
-        if(this._childs.length > 0)
-            json_txt = `{\n"name": "${ this.name }",\n"type": "${ NodeType[this.type] }",\n"childs": [${ this.childsToJson()}]\n}`;
-        
-        json_txt = `{\n"name": "${ this.name }",\n"type": "${ NodeType[this.type] }",\n"childs": []\n}`;
-        return json_txt;
-    }
-
-    private childsToJson():string{
-        let json_txt = '';
-        this._childs.forEach((value, index)=>{
-            if(index === 0) json_txt += value.toJson();
-            json_txt += ',\n' + value.toJson();
+    /**
+     * Recursive method that generates the graphviz code of the node and its children.
+     * @param id Array containing a counter of visited nodes.
+     * @returns Object that contains the nodes and links in graphviz code.
+     */
+    public graph(id:number[]):{nodes:string, links:string}{
+        const idCurrent = id[0];
+        let nodes:string='', links:string='';
+        nodes = `n${idCurrent} [label="${this.name}"];\n`;
+        let returned:{nodes:string, links:string};
+        let idChild:number;
+        // Iterating children of the current node
+        this.getChilds().forEach((item:Node)=>{
+            idChild = id[0] + 1; 
+            id[0] = idChild;
+            returned = item.graph(id);
+            nodes += returned.nodes;
+            links += `n${idCurrent} -> n${idChild};\n`;
+            links += returned.links;
         });
-        return json_txt;
-    }
-    //#endregion
 
-    //#region METODOS PARA OBTENER COIDGO DE GRAPHVIZ *****************************************************************
-    public static graph(node:Node):string{
-        let txt:string[] = Node.graph_(node);
-        let graphvizTxt =  `digraph G {\n${txt[0]}\n${txt[1]}}`;
-        return graphvizTxt;
-    }
+        return {nodes, links};
+    };
 
-    private static graph_(node:Node):string[]{
-        if(node.type === NodeType.ERROR) return ["",""];
-        let nodoTxt:string = '', linkTxt:string = '';
-        let idNode = node.id;
-        nodoTxt += `n${idNode} [label="${node.name}"];\n`;
-        let size = node.childs.length;
-        if(size > 0){
-            let returned:string[];
-            for(let item of node.childs){
-                if(item.type === NodeType.ERROR) continue;
-                returned = Node.graph_(item);
-                nodoTxt += returned[0];
-                linkTxt += `n${idNode} -> n${item.id};\n`;
-                linkTxt += returned[1];
-            }
-        }       
-        return [nodoTxt, linkTxt];
+    /**
+     * String that contains the graphviz code of the Abstract Syntax Tree.
+     * @returns Strint with graphviz code.
+     */
+    public getDot():string{
+        const {nodes, links} = this.graph([1]);
+        return  `digraph G {\n${nodes}\n${links}}`;
     }
-    //#endregion
+}
+
+export class NodeBase extends Node{
+    run(st: SymbolTable): Value { return new Value(''); }
+    getChilds(): Node[] { return [];}
 }

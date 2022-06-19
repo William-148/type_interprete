@@ -8,31 +8,34 @@ import { Display } from "../models/Display";
 /**
  * Representa a la sentencia de llamada o invocación de una función
  */
- export class CallFunction extends Node implements IRunner{
-    constructor(id:string, parameter:Node){
-        super(id, NodeType.INS_LLAMADA_FUNCION);
-        this.addChild(parameter);
+ export class CallFunction extends Node{
+    private parameters:Node;
+    constructor(id:string, parameters:Node){
+        super(id, NodeType.INS_CALL_FUNCTION);
+        this.parameters = parameters;
+        this.parameters.name = "Parámetros";
     }
 
     public run (st: SymbolTable):Value{
         switch(this.name){
-            case "console.log": return this.print(st)
+            case "console.log": return this.print(st);
         }
-        return new Value('', this.row, this.col);
+        return new Value('', this._position);
     }
 
     //#region FUNCIONES NATIVAS **************************************************************
     private print(st:SymbolTable,):Value{
-        const parameters:Node = this.childs[0];
         let logs:string='';
         //Recorremos todos los parametros de la función
         let parameterValue:Value;
-        parameters.childs.forEach((parameter:IRunner)=>{
+        this.parameters.getChilds().forEach((parameter:IRunner)=>{
             parameterValue = parameter.run(st);
             logs += parameterValue;
         });
         Display.log(logs + '\n');
-        return new Value('', this.row, this.col);
+        return new Value('', this._position);
     }
     //#endregion
+
+    public getChilds():Node[]{ return [this.parameters]; }
 }

@@ -41,12 +41,12 @@ export class SymbolTable {
             // Verificar que no sea constante
             if(finded.isConst) throw new AnalysisError(
                 `No se puede actualizar una constante: "${symbol.id}".`,
-                ErrorType.SEMANTICO, symbol
+                ErrorType.SEMANTICO, symbol.position
             );
             // Verificar el tipo de dato
             if(!finded.isAssignable(symbol)) throw new AnalysisError(
-                `"${symbol.typeToStr()}" no es asignable a "${finded.typeToStr()}".`,
-                ErrorType.SEMANTICO, symbol
+                `"${symbol.typeStr}" no es asignable a "${finded.typeStr}".`,
+                ErrorType.SEMANTICO, symbol.position
             );
             // Se actualiza el simbolo
             this._symbols[symbol.id] = symbol;
@@ -91,7 +91,7 @@ export class SymbolTable {
         );
         // Verificar el tipo de dato
         if(!symbol.isAssignable(value)) throw new AnalysisError(
-            `"${value.typeToStr()}" no es asignable a "${symbol.symbolTypeTxt}".`,
+            `"${value.typeStr}" no es asignable a "${symbol.symbolTypeTxt}".`,
             ErrorType.SEMANTICO, idPosition
         );
         // Se actualiza el simbolo
@@ -104,18 +104,18 @@ export class SymbolTable {
      */
     public declare(id:string, value:Value, symbolType:DataType, isConstat:boolean):void{
         const symbol = new Symbol(id, value, symbolType, isConstat);
-        symbol.setPosition(value);
+        symbol.position = value.position;
         // Verificar el tipo de dato
         if(!symbol.isAssignable(value)) throw new AnalysisError(
-            `"${value.typeToStr()}" no es asignable a "${symbol.symbolTypeTxt}".`,
-            ErrorType.SEMANTICO, value
+            `"${value.typeStr}" no es asignable a "${symbol.symbolTypeTxt}".`,
+            ErrorType.SEMANTICO, value.position
         );
 
         // Buscando simbolo en entorno actual
         const finded = this._symbols[symbol.id];
         if(!!finded) throw new AnalysisError(
             `"${symbol.id}" ya ha sido declarado en el entorno actual.`,
-            ErrorType.SEMANTICO, value
+            ErrorType.SEMANTICO, value.position
         );
         // Agregamos el simbolo
         this._symbols[id] = symbol;

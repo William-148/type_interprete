@@ -5,52 +5,23 @@ export enum NodeType{
     CONSTANTE,
 
     //Tipo de Dato
-    DATA_TYPE,//*
-    NUMBER,//*
-    DECIMAL,
-    STRING,//*
-    IDENTIFICADOR,//*
-    BOOLEAN,//*
+    DATA_TYPE,
+    NUMBER,//############
+    STRING,//############
+    IDENTIFIER,//############
+    BOOLEAN,//############
     OBJ_ARRAY,
     OBJ_TYPE,
-    NULL,
-
-    //Tipo de operaciones Numericas*
-    SUMA,
-    RESTA,
-    MINUS,
-    PLUS,
-    MULTIPLICACION,
-    DIVISION,
-    MODULO,
-    POTENCIA,
-    INCREMENTO,
-    DECREMENTO,
-    INCREMENTO_UNARIO,
-    DECREMENTO_UNARIO,
-
-    //Tipo de operaciones comparativas*
-    MAYOR_QUE,
-    MENOR_QUE,
-    MAYOR_IGUAL,
-    MENOR_IGUAL,
-    NO_IGUAL,
-    COMPARADOR_IGUAL,
-    
-    //Tipo de operaciones Logicas*
-    NOT,
-    AND,
-    OR,
     
     //Tipo de instrucciones *
     INS_FUNCION,
-    INS_LLAMADA_FUNCION,
+    INS_CALL_FUNCTION,//############
     INS_LLAMADA_ARRAY,
     INS_NEW_ARRAY,
     INS_OP_TERNARIO,
-    INS_DECLARACION,
+    INS_DECLARATION,//############
     INS_DEC_ASIGN,
-    INS_ASIGNACION,
+    INS_ASSIGNMENT,//############
     INS_IMPRIMIR,
     INS_WHILE,
     INS_DO_WHILE,
@@ -66,20 +37,21 @@ export enum NodeType{
     INS_RETURN,
     INS_TYPE,
     INS_GRAPH,
-    INS_EXPRESION,
+    INS_EXPRESION,//############
 
     //--
     PROPIEDAD,
-    ERROR,//*
-    UNDEFINED,//*
+    ERROR,//############
+    UNDEFINED,//############
 
     //NEWS
-    SENTENCE,
-    OP_BINARY,
-    DT_STRING,
-    DT_BOOLEAN,
-    DT_NUMBER,
-    DT_IDENTIFIER,
-    DT_ARRAY
+    SENTENCE,//############
+    OP_BINARY,//############
+    DT_STRING,//############
+    DT_BOOLEAN,//############
+    DT_NUMBER,//############
+    DT_IDENTIFIER,//############
+    DT_ARRAY,//############
+    LIST_EXPRESSION,//############
 
 }

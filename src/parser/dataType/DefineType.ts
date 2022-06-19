@@ -1,5 +1,7 @@
 import { NodeType } from "../models/NodeType";
 import { Node } from "../models/Node";
+import { SymbolTable } from "../models/SymbolTable";
+import { Value } from "../models/Value";
 
 // CLASE OPERACIONES BINARIAS ************************************************************************
 export class DefineType extends Node{
@@ -22,4 +24,8 @@ export class DefineType extends Node{
             this._arrayLevel += level;
         }
     }
+
+    run(st: SymbolTable): Value { return new Value(''); }
+
+    getChilds(): Node[] {  return []; }
 }
