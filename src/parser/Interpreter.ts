@@ -12,7 +12,7 @@ export class Interpreter {
     /**
      * Executes the code contained in a string.
      * @param input String that contains the code to execute.
-     * @returns String that contains logs of the result of the execution.
+     * @returns String that contains logs of the execution result.
      */
     public run(input:string):string{
         //Ejecutar Parser

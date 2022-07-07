@@ -36,7 +36,6 @@ export class BinaryOperation extends Node{
         }
     }
 
-    //#region OPERACIÓN BINARIA **********************************************************************
     /**
      * @returns Objeto Value que contiene el resultado de la operación
      * @throws AnalysisError
@@ -44,7 +43,7 @@ export class BinaryOperation extends Node{
      private binaryOperation(val1:Value, val2:Value, operation:string):Value{
         // Operación Número-Número
         if(val1.isNumber && val2.isNumber){
-            const result:number = this.numericalOperation(val1, val2, operation);
+            const result:number = this.numericalOperation(val1, val2);
             return new Value(result, val1.position, DataType.NUMBER);
         }
         // Operación con String
@@ -52,13 +51,13 @@ export class BinaryOperation extends Node{
             return new Value(val1.value + val2.value, val1.position, DataType.STRING);
         }
         throw new AnalysisError(
-            `Operación "${operation}" no se puede realizar entre ${val1.typeStr}-${val2.typeStr}`,
+            `Operación "${this.name}" no se puede realizar entre ${val1.typeStr}-${val2.typeStr}`,
             ErrorType.SEMANTICO, this._position
         );
     }
 
-    private numericalOperation(val1:Value, val2:Value, operation:string):number{
-        switch(operation){
+    private numericalOperation(val1:Value, val2:Value):number{
+        switch(this.name){
             case "+": return val1.value + val2.value;
             case "-": return val1.value - val2.value;
             case "/": return val1.value / val2.value;
@@ -68,5 +67,4 @@ export class BinaryOperation extends Node{
             default: return 0;
         }
     }
-    //#endregion
 }

@@ -1,6 +1,7 @@
 import { Node, NodeBase } from "../models/Node";
 import { NodeType } from "../models/NodeType";
 import { Value } from "../models/Value";
+import { Symbol } from "../models/Symbol";
 import { SymbolTable } from "../models/SymbolTable";
 import { Display } from "../models/Display";
 import { DataType, StringType } from "../models/DataType";
@@ -41,6 +42,8 @@ export class DeclarationList extends Node{
     private identifier:string;
     private expression:Node|null;
     private dataType:DataType = DataType.ANY;
+    private arrayLevel:number = 0;
+    private arrayType:DataType = DataType.ANY;
     private _isConst:boolean;
 
     /**
@@ -52,7 +55,7 @@ export class DeclarationList extends Node{
         super("Declaración", NodeType.INS_DECLARATION);
         this.identifier = identifier;
         this.expression = value;
-        if(!!dataType) this.defineDataType(dataType.type);
+        if(!!dataType) this.defineDataType(dataType);
         this._isConst = isConst;
     }
 
@@ -65,18 +68,25 @@ export class DeclarationList extends Node{
 
     public set isConst(isConst:boolean) { this._isConst = isConst; }
 
-    private defineDataType(dataType:NodeType):void{
-        switch(dataType){
-            case NodeType.DT_STRING: 
-                this.dataType = DataType.STRING; break;
-            case NodeType.DT_BOOLEAN: 
-                this.dataType = DataType.BOOL; break;
-            case NodeType.DT_NUMBER: 
-                this.dataType = DataType.NUMBER; break;
-            case NodeType.DT_IDENTIFIER: 
-                this.dataType = DataType.STRUCT; break;
+    private NodeTypeToData(nodeType:NodeType):DataType{
+        switch(nodeType){
+            case NodeType.DT_STRING: return DataType.STRING;
+            case NodeType.DT_BOOLEAN: return DataType.BOOL;
+            case NodeType.DT_NUMBER: return DataType.NUMBER;
+            case NodeType.DT_IDENTIFIER: return DataType.STRUCT;
+            default: return DataType.ANY;
+        }
+    }
+
+    private defineDataType(dataType:DefineType):void{
+        switch(dataType.type){
+            case NodeType.DT_ARRAY:
+                this.dataType = DataType.ARRAY;
+                this.arrayLevel = dataType.arrayLevel;
+                this.arrayType = this.NodeTypeToData(dataType.arrayType);
+                break;
             default: 
-                this.dataType = DataType.ANY;
+                this.dataType = this.NodeTypeToData(dataType.type);
         }
     }
 
@@ -85,7 +95,11 @@ export class DeclarationList extends Node{
             this.expression.run(st):
             new Value('', new Position(this._position.row, this._position.col + this.identifier.length + 1));
         try{
-            st.declare(this.identifier, expValue, this.dataType, this._isConst);
+            const newSymbol = new Symbol(this.identifier, this.dataType, this._isConst);
+            newSymbol.arrayLevel = this.arrayLevel;
+            newSymbol.arrayType = this.arrayType;
+            newSymbol.position = expValue.position;
+            st.declare(newSymbol, expValue);
         }catch(error){
             Display.error(error);
         }

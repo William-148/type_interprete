@@ -102,9 +102,7 @@ export class SymbolTable {
      * Crea una variable o constante en el ambito actual
      * @throws AnalysisError
      */
-    public declare(id:string, value:Value, symbolType:DataType, isConstat:boolean):void{
-        const symbol = new Symbol(id, value, symbolType, isConstat);
-        symbol.position = value.position;
+    public declare(symbol:Symbol, value:Value):void{
         // Verificar el tipo de dato
         if(!symbol.isAssignable(value)) throw new AnalysisError(
             `"${value.typeStr}" no es asignable a "${symbol.symbolTypeTxt}".`,
@@ -118,6 +116,7 @@ export class SymbolTable {
             ErrorType.SEMANTICO, value.position
         );
         // Agregamos el simbolo
-        this._symbols[id] = symbol;
+        symbol.setValue(value);
+        this._symbols[symbol.id] = symbol;
     }
 }

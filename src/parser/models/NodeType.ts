@@ -10,7 +10,7 @@ export enum NodeType{
     STRING,//############
     IDENTIFIER,//############
     BOOLEAN,//############
-    OBJ_ARRAY,
+    ARRAY_STRUCTURE,//############
     OBJ_TYPE,
     
     //Tipo de instrucciones *
@@ -47,6 +47,8 @@ export enum NodeType{
     //NEWS
     SENTENCE,//############
     OP_BINARY,//############
+    OP_RELATIONAL,//############
+    OP_LOGIC,//############
     DT_STRING,//############
     DT_BOOLEAN,//############
     DT_NUMBER,//############

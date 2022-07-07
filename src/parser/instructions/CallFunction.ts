@@ -4,6 +4,7 @@ import { NodeType } from "../models/NodeType";
 import { Value } from "../models/Value";
 import { SymbolTable } from "../models/SymbolTable";
 import { Display } from "../models/Display";
+import { DataType } from "../models/DataType";
 
 /**
  * Representa a la sentencia de llamada o invocación de una función
@@ -28,10 +29,10 @@ import { Display } from "../models/Display";
         let logs:string='';
         //Recorremos todos los parametros de la función
         let parameterValue:Value;
-        this.parameters.getChilds().forEach((parameter:IRunner)=>{
+        for(let parameter of this.parameters.getChilds()){
             parameterValue = parameter.run(st);
             logs += parameterValue;
-        });
+        }
         Display.log(logs + '\n');
         return new Value('', this._position);
     }

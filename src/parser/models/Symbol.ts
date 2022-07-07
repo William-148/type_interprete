@@ -11,18 +11,30 @@ export class Symbol extends Value {
     private _isConst:boolean;
     private _symbolType:DataType;
 
-    constructor(id:string, value:Value, symbolType:DataType, isConst:boolean=false){
-        super(value.value, null, value.type);
+    constructor(id:string, symbolType:DataType, isConst:boolean=false){
+        super(undefined, null, DataType.UNDEFINED);
         this._id=id;
         this._isConst=isConst;
-        this._symbolType = (symbolType === DataType.ANY && !value.isUndefined)? value.type : symbolType;
+        this._symbolType = symbolType;
     }
 
     public get id():string { return this._id; }
     public set id(id:string) { this._id=id; }
     public get isConst():boolean { return this._isConst }
-    public get acceptAny():boolean { return this._symbolType === DataType.ANY;}
-    public get symbolTypeTxt():string { return StringType(this._symbolType); }
+    public get acceptAny():boolean { return this._symbolType === DataType.ANY; }
+    public get symbolIsArray():boolean { return this._symbolType === DataType.ARRAY; }
+    public get symbolTypeTxt():string { 
+        if(this.symbolIsArray) return `Array${this._arrayLevel>1?"("+this.arrayLevel+")":''}<${StringType(this._arrayType)}>`;
+        return StringType(this._symbolType); 
+    }
+
+    public setValue(value:Value):void{
+        this._value = value.value;
+        this._type = value.type;
+        this._arrayType = value.arrayType;
+        this._arrayLevel = value.arrayLevel;
+        this._symbolType = (this._symbolType === DataType.ANY && !value.isUndefined)? value.type : this._symbolType;
+    }
 
     /**
      * Verifica si es posible asignarle un valor a un simbolo por su tipo de dato
@@ -30,7 +42,9 @@ export class Symbol extends Value {
      * @returns boolean
      */
      public isAssignable(value:Value):boolean{
-        return this.acceptAny || value.isUndefined || this._symbolType === value.type;
+        if(this.acceptAny) return true;
+        if(this.symbolIsArray) return this._arrayLevel === value.arrayLevel && this._arrayType === value.arrayType;
+        return value.isUndefined || this._symbolType === value.type;
     }
 }
 

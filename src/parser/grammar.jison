@@ -6,17 +6,17 @@
     const { NodeType } = require('./models/NodeType');
     const { AnalysisError, ErrorType } = require('./models/Error');
     const { Null, Number, String, Bool, Identifier } = require('./expressions/Primitive');
-    const { BinaryOperation } = require('./expressions/Operation');
+    const { BinaryOperation } = require('./expressions/BinaryOperation');
+    const { RelationalOperation } = require('./expressions/RelationalOperation');
+    const { LogicOperation } = require('./expressions/LogicOperation');
     const { DefineType } = require('./dataType/DefineType');
     const { Sentence } = require('./instructions/Sentence');
     const { Declaration, DeclarationList } = require('./instructions/Declaration');
     const { CallFunction } = require('./instructions/CallFunction');
     const { Assign } = require('./instructions/Assign');
     const { SingleLine } = require('./instructions/SingleLine');
+    const { ArrayStructure } = require('./dataStructure/Array');
     let errorList = [];
-    //let nodo_inicio = new NodeBase('START');
-    //nodo_inicio.id = 0; 
-    //Node.count = 1;
 %}
 
 /* #########################################  ANÁLISIS LÉXICO  ################################################# */
@@ -99,6 +99,7 @@ cadena_t                ({comilla}((?:\\{comilla}|(?:(?!{comilla}).))*){comilla}
 "=="                    return '=='
 ">="                    return '>='
 ">"                     return '>'
+"!=="                   return '!=='
 "!="                    return '!='
 
 //operadores logicos
@@ -145,7 +146,7 @@ cadena_t                ({comilla}((?:\\{comilla}|(?:(?!{comilla}).))*){comilla}
 %left '||'                          // Menor Precedencia
 %left '&&'
 %right '?'
-%left '==', '!=', '==='
+%left '==', '!=', '!==', '==='
 %left '>=', '<=', '<', '>'
 %left '+' '-'
 %left '*' '/' '%'
@@ -278,7 +279,8 @@ ASSIGNMENT
                                                         }
 ;
 
-/*  ---- FUNCIONES NATIVAS --------------------------------------------------------- */
+
+/******************************************* FUNCIONES NATIVAS *******************************************/
 CONSOLE //Imprimir parametros
     : 'console' '.' 'log' '(' PASSING_PARAMETERS ')' ';'        { $$ = new CallFunction('console.log', $5); $$.setRowCol(this._$.first_line, this._$.first_column); }
 ;
@@ -288,38 +290,58 @@ PASSING_PARAMETERS
     | EXPRESION                                         { $$ = new Sentence(); $$.add($1); }
 ;
 
+/************************************************ ARRAYS ************************************************/
+ARRAY
+    : '[' ELEMENT_LIST ']'                              { $$ = new ArrayStructure($2); $$.setRowCol(this._$.first_line, this._$.first_column); }
+    | '[' ']'                                           { $$ = new ArrayStructure([]); $$.setRowCol(this._$.first_line, this._$.first_column); }
+;
+
+ELEMENT_LIST
+    : ELEMENT_LIST ',' EXPRESION                        { $$ = $1; $$.push($3); }
+    | EXPRESION                                         { $$ = [ $1 ]; }
+;
 
 /* ------  VALOR DE DATOS ------------------------------------------------------------------ */
 
 //-----------------------------------------------------------------------------------------------
 EXPRESION
-  : '(' EXPRESION ')'             { $$ = $2; }
+    : '(' EXPRESION ')'             { $$ = $2; }
 
-  //OPERACIONES ARITMETICAS
-  | EXPRESION '+' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '-' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '*' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '/' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '**' EXPRESION      { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '%' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    //OPERACIONES ARITMETICAS
+    | EXPRESION '+' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | EXPRESION '-' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | EXPRESION '*' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | EXPRESION '/' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | EXPRESION '**' EXPRESION      { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+    | EXPRESION '%' EXPRESION       { $$ = new BinaryOperation($1, $3, $2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+
+    //RELACIONALES
+    | EXPRESION '<' EXPRESION       { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '>' EXPRESION       { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '<=' EXPRESION      { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '>=' EXPRESION      { $$ = new RelationalOperation($1, $3, $2); }    
+    | EXPRESION '===' EXPRESION     { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '==' EXPRESION      { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '!=' EXPRESION      { $$ = new RelationalOperation($1, $3, $2); }
+    | EXPRESION '!==' EXPRESION     { $$ = new RelationalOperation($1, $3, $2); }
+
+     //OPERADOR LOGICO
+    | EXPRESION '||' EXPRESION      { $$ = new LogicOperation($1, $3, $2); }
+    | EXPRESION '&&' EXPRESION      { $$ = new LogicOperation($1, $3, $2); }
+
+    //DATOS COMPLEJOS
+    | ARRAY                       { $$ = $1; }
+    //| '{' DATO_TYPE '}'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
+    //| 'new' 'Array' '(' EXPRESION ')'         { $$ = new Node('New Array', NodeType.INS_NEW_ARRAY); 
+    //                                          $$.addChild($4);
+    //                                          $$.setRowCol(this._$.first_line, this._$.first_column);}
+
  /*
   | '-' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.MINUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}    
   | '+' EXPRESION %prec UMINUS    { $$ = new Node($1, NodeType.PLUS); $$.addChild($2); $$.setRowCol(this._$.first_line, this._$.first_column);}
+  | '!' EXPRESION                 { $$ = new RelationalOperation($1, $3, $2); NodeType.NOT); $$.addChild($2); }
 
-  //RELACIONALES
-  | EXPRESION '<' EXPRESION       { $$ = new Node($2, NodeType.MENOR_QUE); $$.addChild($1); $$.addChild($3); }
-  | EXPRESION '>' EXPRESION       { $$ = new Node($2, NodeType.MAYOR_QUE); $$.addChild($1); $$.addChild($3); }
-  | EXPRESION '<=' EXPRESION      { $$ = new Node($2, NodeType.MENOR_IGUAL); $$.addChild($1); $$.addChild($3); }
-  | EXPRESION '>=' EXPRESION      { $$ = new Node($2, NodeType.MAYOR_IGUAL); $$.addChild($1); $$.addChild($3); }    
-  | EXPRESION '===' EXPRESION     { $$ = new Node($2, NodeType.COMPARADOR_IGUAL); $$.addChild($1); $$.addChild($3); }
-  | EXPRESION '==' EXPRESION      { $$ = new Node($2, NodeType.COMPARADOR_IGUAL); $$.addChild($1); $$.addChild($3); }
-  | EXPRESION '!=' EXPRESION      { $$ = new Node($2, NodeType.NO_IGUAL); $$.addChild($1); $$.addChild($3); }
-  | '!' EXPRESION                 { $$ = new Node($1, NodeType.NOT); $$.addChild($2); }
-
-  //OPERADOR LOGICO
-  | EXPRESION '||' EXPRESION      { $$ = new Node($2, NodeType.OR); $$.addChild($1); $$.addChild($3); $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | EXPRESION '&&' EXPRESION      { $$ = new Node($2, NodeType.AND); $$.addChild($1); $$.addChild($3); $$.setRowCol(this._$.first_line, this._$.first_column);}
-
+ 
   //INCREMENTO Y DECREMENTO
   | 'identificador' '+=' EXPRESION    { $$ = new Node($2, NodeType.INCREMENTO); 
                                         $$.addChild(new Node($1, NodeType.IDENTIFICADOR));                                          
@@ -352,12 +374,7 @@ EXPRESION
                                               $$.addChild($5); 
                                               $$.setRowCol(this._$.first_line, this._$.first_column); }
  
-  //DATOS COMPLEJOS
-  | '[' DATO_ARRAY']'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | '{' DATO_TYPE '}'                       { $$ = $2; $$.setRowCol(this._$.first_line, this._$.first_column);}
-  | 'new' 'Array' '(' EXPRESION ')'         { $$ = new Node('New Array', NodeType.INS_NEW_ARRAY); 
-                                              $$.addChild($4);
-                                              $$.setRowCol(this._$.first_line, this._$.first_column);}
+  
 */
   //DATOS PRIMITIVOS                   
   | 'numero'                      { $$ = new Number($1); $$.setRowCol(this._$.first_line, this._$.first_column);}
